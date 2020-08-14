@@ -1,0 +1,36 @@
+= Development Notes
+
+== What's in the folder
+
+* `package.json` -- the manifest file that declares the extension aspects
+* `src/extension.ts` -- the extension's main file (with the `activate` function)
+* `src/*.ts` -- secondary source code files
+* `src/utils.ts` -- TBD
+
+== Taking the Extension Out for a Spin
+
+Press `F5` to open a new Code window with the extension loaded. 
+(We'll call the original copy of VSCode the "dev" window.
+We'll call the spawned copy of VSCode the "trial" window.)
+
+* The extension runs in debug mode, so setting breakpoints, etc. works fine.
+* `console.log()` and `console.error()` output goes to the "debug console" (dev window).
+* A debugging toolbar pops up (dev window). For one thing, you can relaunch the extension from the debug toolbar after changing any source code.
+* You can also use the reload command (`Ctrl+R`; trial window) to reload the extension.
+
+
+== The API
+
+* See `node_modules/@types/vscode/index.d.ts`.
+
+== Run tests
+
+* For this project, we're using `Jest` for the automated tests.
+* Tests are locatated in the tests folder.
+
+== Further Reading
+
+ * Reduce the extension size and improve the startup time by (link:https://code.visualstudio.com/api/working-with-extensions/bundling-extension[bundling the extension].
+ * (link:https://code.visualstudio.com/api/working-with-extensions/publishing-extension[Publish the extension]) on the VSCode extension marketplace.
+ * Automate builds by setting up (link:https://code.visualstudio.com/api/working-with-extensions/continuous-integration[Continuous Integration]).
+
