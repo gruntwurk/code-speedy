@@ -5,26 +5,32 @@ let variableExpressions: string[] = [];
 
 const standardVariablesAction = [
     "vars:",
-    "$CLIPBOARD = vscode.env.clipboard.readText()",
-    "$CURRENT_FILE_DIR = path.dirname(window.activeTextEditor.document.uri.fsPath)",
-    "$CURSOR_CHAR_NUMBER = window.activeTextEditor.selection.start.character",
-    "$LINE_COUNT = window.activeTextEditor.document.lineCount",
-    "$MACHINE_ID = vscode.env.machineId (The name of computer you are running on)",
-    "$PREFERED_LANGUAGE = vscode.env.language('en-US')",
-    "$SESSION_ID = vscode.env.sessionId (A unique string that changes when VS Code restarts)",
-    "$SHELL_NAME = vscode.env.shell (The name of the default terminal shell)",
-    "$TM_CURRENT_LINE = window.activeTextEditor.document.lineAt(window.activeTextEditor.selection.start)",
-    "$TM_CURRENT_WORD = window.activeTextEditor.document.getText(window.activeTextEditor.document.getWordRangeAtPosition(window.activeTextEditor.selection.start))",
-    "$TM_DIRECTORY = vscode.workspace.rootPath",
-    "$TM_FILENAME = path.basename(window.activeTextEditor.document.uri.fsPath)",
-    "$TM_FILENAME_BASE = path.basename(window.activeTextEditor.document.uri.fsPath).replace(/\\.[^/.]+$/, '')",
-    "$TM_FILEPATH = window.activeTextEditor.document.uri.fsPath",
-    "$TM_LINE_INDEX = window.activeTextEditor.selection.start.line",
-    "$TM_LINE_NUMBER = window.activeTextEditor.selection.start.line + 1",
-    "$TM_SELECTED_TEXT = window.activeTextEditor.document.getText(window.activeTextEditor.selection)",
-    "$TODAY = new Date().toDateString();",
-    "$WORKSPACE_NAME = vscode.workspace.name"
+    "CLIPBOARD = vscode.env.clipboard.readText()",
+    "CURRENT_FILE_DIR = path.dirname(window.activeTextEditor.document.uri.fsPath)",
+    "CURSOR_CHAR_NUMBER = window.activeTextEditor.selection.start.character",
+    "DOC_CURRENT_LINE = doc.lineAt(window.activeTextEditor.selection.start)",
+    "DOC_ENTIRE_TEXT = doc.getText()",
+    "EOL_STYLE = (doc.eol == 1 ? 'LF' : 'CRLF')",
+    "LINE_COUNT = window.activeTextEditor.document.lineCount",
+    "MACHINE_ID = vscode.env.machineId (The name of computer you are running on)",
+    "MULTI_SELECT_COUNT = window.activeTextEditor.selections.length",
+    "PREFERED_LANGUAGE = vscode.env.language('en-US')",
+    "SESSION_ID = vscode.env.sessionId (A unique string that changes when VS Code restarts)",
+    "SHELL_NAME = vscode.env.shell (The name of the default terminal shell)",
+    "TM_CURRENT_LINE = window.activeTextEditor.document.lineAt(window.activeTextEditor.selection.start)",
+    "TM_CURRENT_WORD = window.activeTextEditor.document.getText(window.activeTextEditor.document.getWordRangeAtPosition(window.activeTextEditor.selection.start))",
+    "TM_DIRECTORY = vscode.workspace.rootPath",
+    "TM_FILENAME = path.basename(window.activeTextEditor.document.uri.fsPath)",
+    "TM_FILENAME_BASE = path.basename(window.activeTextEditor.document.uri.fsPath).replace(/\\.[^/.]+$/, '')",
+    "TM_FILEPATH = window.activeTextEditor.document.uri.fsPath",
+    "TM_LINE_INDEX = window.activeTextEditor.selection.start.line",
+    "TM_LINE_NUMBER = window.activeTextEditor.selection.start.line + 1",
+    "TM_SELECTED_TEXT = window.activeTextEditor.document.getText(window.activeTextEditor.selection)",
+    "TODAY = new Date().toDateString();",
+    "WORKSPACE_NAME = vscode.workspace.name"
 ];
+
+
 
 export class VariableDefs {
     variableNames: string[] = [];

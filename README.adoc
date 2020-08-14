@@ -3,17 +3,318 @@
 
 == Features
 
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
+Visual Studio Code does not have a macro-recording capability for automating tasks.
+Snippets are the only things that come close. 
+There have been a few takes on creating extensions that approximate the idea of recording macros (except that "`recording`" is really "`programming`").
+(See History, below.)
+This is my take.
 
-For example if there is an image subfolder under your extension project workspace:
+Basically, this extension allows you configure any number of macros and assign them each a shortcut key sequence.
+Here we define a "`macro`" as a list of "`actions.`"
+And an action is, in turn, a list of "`steps.`"
 
-\!\[feature X\]\(images/feature-x.png\)
+There are several action types:
 
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
+* *command* -- Executes a VS Code command with or without arguments. (Anything you can assign a shortcut sequence to is a "`command.`")
+* *javascript* -- Execute some arbitrary JavaScript code, with full access to the VS Code API.
+* *shellscript* -- Execute a shell script (in a hidden terminal window).
+* *snippet* -- Inserts an arbirary snippet (that is, where you define the snippet template right there as this action's steps. (If you want to invoke an existing snippet by its prefix, there's a command for that.)
+* *variables* -- Define a set of variables using JavaScript expressions. The calculated values are inserted into named placeholders in any of the above (command arguments, javascript code, shell script code, snippet templates).
+* *description* -- (not implemented yet) does nothing (just a convenient way to document what the macro does).
+* *shortcut* -- (not implemented yet) a default keyboard shortcut to assign
+
+A macro can mix and match all of these.
+For example:
+
+TBD
+
+
+== Installation
+
+First, install the code-speedy extension (more TBD).
+
+Then, open your VS Code settings.json and create a new `code-speedy` section:
+
+. Click on the gear-icon (lower left).
+. Select "`Settings.`"
+. Press the open-settings icon in the top right corner. 
+(It used to look like {}, but now it looks like a dog-eared page with a wrap-around arrow.) 
+. Add a section that goes something like this:
+
+[source:json]
+----
+"code-speedy": {
+    "macro-files": [ 
+    	"/work/universal-macros.speedy",
+    	"~personal-macros.speedy",
+    	"project-macros.speedy",
+    	"../project-group-macros.speedy"
+    ]
+}
+----
+
+* You can name these files anything you want. Using a `.speedy` extension is just a suggestion.
+* Paths are relative to (TBD).
+* On Windows, a leading ~ is changed to `%USERPROFILE%\`
+
+== Invoking a Macro
+
+You can run a macro via the command pallet (ctrl+shift+P).
+Type `speedy` to jump down to the `speedy:` commands and select `speedy: run macro`.
+Pick the macro you want to run.
+
+To create a keybinding to a macro...
+. Open the Keyboard Shortcuts (Gear-icon -> Keyboard Shortcuts).
+. Start to type "speedy".
+All of the code-speedy macros have a "speedy." prefix.
+
+
+
+== Macro Elements: Commands and Modifiers
+
+Again, a "`macro`" consist of "`actions,`" and each action consists of "`steps.`"
+A step is simply a line of text (a string).
+So, an action is a list (array) of strings.
+And a macro, therefore is a list of lists of strings.
+
+The first step (line) of each action specifies the action type (e.g. "command: cursorHome", or "javascript:")
+
+There are currently five action types:
+
+* *command:* (or "cmd:")
+* *javascript:* (or "js:")
+* *shellscript:* (or "shell:")
+* *snippet:* (or "snip:")
+* *variables:* (or "vars:")
+
+For a command, the name of the command follows the colon.
+If the command takes any arguments, then you provide those as steps 2, 3, ...
+
+For JavaSript, a shell script, or a snippet, do not put anything after the colon in step 1.
+The code or template text begins with step 2.
+
+For variables, either put the word "standard" after the colon in step 1, or leave it blank.
+Your variable definitions begin with step 2.
+A variable definition consists of a name, followed by an equal sign (=), followed by a JavaScript expression.
+The name can only consist of letters, numbers, and underscores.
+Specifying ("vars: standard") causes a dozen pre-defined variables to be loaded. (See below.)
+
+
+
+Your JavaScript has access to the `vscode` object, the `window` object and the `path` object (from node path) -- in both the javascript action and the variables action.
+The `vscode` object (`vscode.commands`, `vscode.env`, `vscode.workspace`, `vscode.tasks`, etc.) is documented here: https://code.visualstudio.com/api/references/vscode-api.
+The `window` object is actually a synonym for `vscode.window`.
+
+
+
+== Some Examples
+
+* If the only thing on a line is "[identifier]" then that starts a new macro. ("`Identifier`" consists of letters, numbers, and/or underscores only.) It must not be indented.
+* The line that kicks off a new action ("actiontype:") must not be indented, either.
+* Any indentation and blank lines in the text of a snippet template is preserved.
+* All other indentation/blank lines is ignored (trimmed), i.e. in the bodies of the non-snippet action types.
+
+----
+[openNewTerminal]
+command: 
+	workbench.action.terminal.new
+command: 
+	workbench.action.terminal.sendSequence
+	text = "echo hello\n"
+
+[printToNewTerminal]
+cmd:
+	 workbench.action.terminal.new
+vars:
+	$currentFile = window.activeTextEditor.document.uri.fsPath
+	$currentFolder = vscode.workspace.rootPath
+command:
+	workbench.action.terminal.sendSequence
+	text = "echo the current file is: $currentFile\necho the current folder is: $currentFolder\n"
+
+[showMessageViaJavascript]
+js: 
+	window.showInformationMessage(`You entered: ${await window.showInputBox()}`
+
+[userInputViaJavascript]
+javascript: 
+	let response = await window.showInputBox()
+	await window.showInformationMessage(`You entered: ${response}`)
+
+[shellExample]
+description:
+	Example of running a shell script in the background.
+	IMPORTANT: don't start a shell command here that doesn't finish! 
+	There's no good way of killing/canceling it.
+	(Yes, the echo in step 2 will never be seen.)
+shell: 
+	touch .gitignore
+	echo hello
+
+[anotherShellExqample]
+vars:
+	$currentFolder = vscode.workspace.rootPath
+shell: cd \"$currentFolder\"
+	touch .gitignore
+
+[invokeSomeNamedSnippet]
+command: 
+	type
+	text = "mySnippetPrefixHere"
+command: 
+	insertSnippet
+
+
+[unMultiSelectLast]
+description:
+	For when you Ctrl-Click to multiselect 10 times and on the eleventh get it wrong. 
+	Just press Ctrl-0 (or whatever key you assign) to unselect the eleventh, then carry on.
+	(See also, https://github.com/danseethaler/vscode-tab-through-selections, for more along this line.)
+javascript:
+	const editor = window.activeTextEditor;
+	const newSelections = editor.selections.slice(0, editor.selections.length - 1);
+	editor.selections = newSelections;
+
+[transformToSnake]
+description:
+	A multi-select friendly macro to convert from CamelCase to snake_case.
+	If any particular selection is empty (just a cursor), this will automatically expand it to the whole word first.
+	(Kudos to https://stackoverflow.com/users/398630/brainslugs83 for some pointers)
+javascript:
+	let editor = window.activeTextEditor;
+	expandWords();
+	doTransform(0);
+	function expandWords() { let sels = editor.selections; let i = sels.length-1;
+	  while (i >=0) { let sel = sels[i];
+	    if (sel.isEmpty) {r = editor.document.getWordRangeAtPosition(sel.start); sels[i] = new vscode.Selection(r.start, r.end);}
+	    i--; }
+	  editor.selections = sels;
+	}
+	function doTransform(i) { let sels = editor.selections;
+	  if (i < 0 || i >= sels.length) { return; }
+	  let sel = sels[i];
+	  let word_matches = editor.document.getText(sel).matchAll(/([a-z]+|[A-Z][a-z]*|[^A-Za-z]+)/g);
+	  let words = [];
+	  for (const match of word_matches) {words.push(match[0].toLowerCase())};
+	  editor.edit(eb => {eb.replace(sel, words.join('_'))}).then(x => { doTransform(i+1); });
+	}
+
+[transformToCamel]
+description:
+	Same as transformToSnake, but vice versa
+javascript:
+	let editor = window.activeTextEditor;
+	expandWords();
+	doTransform(0);
+	function expandWords() { let sels = editor.selections; let i = sels.length-1;
+	  while (i >=0) { let sel = sels[i];
+	    if (sel.isEmpty) {r = editor.document.getWordRangeAtPosition(sel.start); sels[i] = new vscode.Selection(r.start, r.end);}
+	    i--; }
+	  editor.selections = sels;
+	}
+	function doTransform(i) { let sels = editor.selections;
+	  if (i < 0 || i >= sels.length) { return; }
+	  let sel = sels[i];
+	  let words = editor.document.getText(sel).split('_')
+	  let camel_words = words.map(function(w) {return w[0].toUpperCase() + w.slice(1,).toLowerCase()});
+	  editor.edit(eb => {eb.replace(sel, camel_words.join(''))}).then(x => { doTransform(i+1); });
+	}
+
+[userInput]
+javascript: 
+	let response = await window.showInputBox()
+	await window.showInformationMessage(`You entered: ${response}`)
+
+
+[clipCurrentWord]
+js: 
+	const doc = window.activeTextEditor.document
+	let cursorPos = window.activeTextEditor.selection.start)
+	let word = doc.getText(doc.getWordRangeAtPosition(cursorPos))
+	(TBD push the word into the clipboard)
+----
+
+== The Command Names
+
+To open the VS Code keybindings.json file...
+
+. Click on the gear-icon (lower left).
+. Select "`Keyboard Shortcuts`"
+. Press the open-settings icon in the top right corner. 
+(It used to look like {}, but now it looks like a dog-eared page with a wrap-around arrow.) 
+. All of the `"command":`s can be copied and pasted from here.
+
+== The Standard Variables
+
+Here are the variables that get defined when you specify "vars: standard":
+NOTE: The ones that begin with TM_ are exact duplicates of the corresponding variables available in snippets.
+
+[width="100%",cols="2,5",options="header"]
+|===
+| Variable Name                | Value
+| CLIPBOARD                    | The contents of your clipboard
+| CURSOR_CHAR_NUMBER           | The position of the cursor from the start of the line
+| DOC_ENTIRE_TEXT              | The text of the entire document
+| EOL_STYLE                    | Either 'LF' or 'CRLF'
+| LINE_COUNT                   | The number of lines in the document, currently.
+| MACHINE_ID                   | The name of computer you are running on
+| MULTI_SELECT_COUNT           | How many multi-selects there are currently
+| PREFERED_LANGUAGE            | e.g. 'en-US'
+| SESSION_ID                   | A unique string that changes when VS Code restarts
+| SHELL_NAME                   | The name of the default terminal shell
+| TM_CURRENT_LINE              | The text of the current line
+| TM_CURRENT_WORD              | The text of the word under cursor (or an empty string)
+| TM_DIRECTORY                 | The directory of the current document
+| TM_FILENAME                  | The filename of the current document (no path)
+| TM_FILENAME_BASE             | The filename of the current document without its extensions
+| TM_FILEPATH                  | The full file path of the current document (dir, filename, and ext)
+| TM_LINE_INDEX                | The zero-index based line number
+| TM_LINE_NUMBER               | The one-index based line number
+| TM_SELECTED_TEXT             | The currently selected text (or an empty string). If multi-select, only returns the first selection.
+| TODAY                        | Today's date
+| WORKSPACE_NAME               | The name of the opened workspace or folder
+|===
+
+To obtain one of these variable values, use a placeholder in the form of `$variablename` or `${variablename}`.
+Either one will work.
+The second form is needed if the placeholder is immediately folloed by a letter, number, or underscore.
+
+In case you are curious, here are the actual definitions:
+
+[width="100%",cols="2,5",options="header"]
+|===
+| Variable Name                | JavaScript Expression
+| CLIPBOARD                    | vscode.env.clipboard.readText()
+| CURRENTFILEDIR               | path.dirname(window.activeTextEditor.document.uri.fsPath)
+| CURSOR_CHAR_NUMBER           | window.activeTextEditor.selection.start.character
+| LINE_COUNT                   | window.activeTextEditor.document.lineCount
+| MACHINE_ID                   | vscode.env.machineId (The name of computer you are running on)
+| PREFERED_LANGUAGE            | vscode.env.language ("en-US")
+| SESSION_ID                   | vscode.env.sessionId (A unique string that changes when VS Code restarts)
+| SHELL_NAME                   | vscode.env.shell (The name of the default terminal shell)
+| TM_CURRENT_LINE              | window.activeTextEditor.document.lineAt(window.activeTextEditor.selection.start)
+| TM_CURRENT_WORD              | window.activeTextEditor.document.getText(window.activeTextEditor.document.getWordRangeAtPosition(window.activeTextEditor.selection.start))
+| TM_DIRECTORY                 | vscode.workspace.rootPath
+| TM_FILENAME                  | path.basename(window.activeTextEditor.document.uri.fsPath)
+| TM_FILENAME_BASE             | path.basename(window.activeTextEditor.document.uri.fsPath).replace(/\\.[^/.]+$/, '')
+| TM_FILEPATH                  | window.activeTextEditor.document.uri.fsPath
+| TM_LINE_INDEX                | window.activeTextEditor.selection.start.line
+| TM_LINE_NUMBER               | window.activeTextEditor.selection.start.line + 1
+| TM_SELECTED_TEXT             | window.activeTextEditor.document.getText(window.activeTextEditor.selection)
+| TODAY                        | new Date().toDateString();
+| WORKSPACE_NAME               | vscode.workspace.name
+|===
+
+
+== History
+
+This extension is heavily inspired by Jeff Hykin's "`Macro Commander`" extension (https://github.com/jeff-hykin/macro-commander), which is a fork of an extension by link:http://gedd.ski[geddski].
+See also http://gedd.ski/post/level-up-coding-with-macros/[Level up your Coding with Macros]
+
 
 == Requirements
 
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
+TBD
 
 == Extension Settings
 
@@ -28,21 +329,13 @@ This extension contributes the following settings:
 
 == Known Issues
 
-Calling out known issues can help limit users opening duplicate issues against your extension.
+TBD
 
 == Release Notes
 
-Users appreciate release notes as you update your extension.
+TBD
 
 === 1.0.0
 
 Initial release of ...
-
-=== 1.0.1
-
-Fixed issue #.
-
-=== 1.1.0
-
-Added features X, Y, and Z.
 
