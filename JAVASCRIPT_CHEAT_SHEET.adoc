@@ -1,0 +1,114 @@
+= A JavaScript Cheat Sheet
+
+== Selected JavaScript Functions
+
+[width="100%",cols="2,5",options="header"]
+|===
+| Operator                      | Syntax
+| Bitwise AND                   | `&`
+| Bitwise Left Shift            | `<<`
+| Bitwise Left Shift            | `>`
+| Bitwise NOT                   | `~`
+| Bitwise OR                    | `|`
+| Bitwise XOR                   | `^`
+| Increment                     | `++`
+| Decrement                     | `--`
+| Logical AND                   | `&&`
+| Logical NOT                   | `!`
+| Logical OR                    | `||`
+| Modulus (division remainder)  | `%`
+|===
+
+[width="100%",cols="2,5",options="header"]
+|===
+| Function                    | Action
+| date.getDate()              | Returns the day of the month (from 1-31)
+| date.getDay()               | Returns the day of the week (from 0-6)
+| date.getFullYear()          | Returns the year
+| date.getHours()             | Returns the hour (from 0-23)
+| date.getMilliseconds()      | Returns the milliseconds (from 0-999)
+| date.getMinutes()           | Returns the minutes (from 0-59)
+| date.getMonth()             | Returns the month (from 0-11)
+| date.getSeconds()           | Returns the seconds (from 0-59)
+| date.getTime()              | Returns the number of milliseconds since midnight Jan 1 1970, and a specified date
+| date.getTimezoneOffset()    | Returns the time difference between UTC time and local time, in minutes
+| date.getUTCDate()           | Returns the day of the month, according to universal time (from 1-31)
+| date.getUTCDay()            | Returns the day of the week, according to universal time (from 0-6)
+| date.getUTCFullYear()       | Returns the year, according to universal time
+| date.getUTCHours()          | Returns the hour, according to universal time (from 0-23)
+| date.getUTCMilliseconds()   | Returns the milliseconds, according to universal time (from 0-999)
+| date.getUTCMinutes()        | Returns the minutes, according to universal time (from 0-59)
+| date.getUTCMonth()          | Returns the month, according to universal time (from 0-11)
+| date.getUTCSeconds()        | Returns the seconds, according to universal time (from 0-59)
+| date.getYear()              | Deprecated. Use the getFullYear() method instead
+| date.now()                  | Returns the number of milliseconds since midnight Jan 1, 1970
+| date.parse()                | Parses a date string and returns the number of milliseconds since January 1, 1970
+| date.setDate()              | Sets the day of the month of a date object
+| date.setFullYear()          | Sets the year of a date object
+| date.setHours()             | Sets the hour of a date object
+| date.setMilliseconds()      | Sets the milliseconds of a date object
+| date.setMinutes()           | Set the minutes of a date object
+| date.setMonth()             | Sets the month of a date object
+| date.setSeconds()           | Sets the seconds of a date object
+| date.setTime()              | Sets a date to a specified number of milliseconds after/before January 1, 1970
+| date.setUTCDate()           | Sets the day of the month of a date object, according to universal time
+| date.setUTCFullYear()       | Sets the year of a date object, according to universal time
+| date.setUTCHours()          | Sets the hour of a date object, according to universal time
+| date.setUTCMilliseconds()   | Sets the milliseconds of a date object, according to universal time
+| date.setUTCMinutes()        | Set the minutes of a date object, according to universal time
+| date.setUTCMonth()          | Sets the month of a date object, according to universal time
+| date.setUTCSeconds()        | Set the seconds of a date object, according to universal time
+| date.setYear()              | Deprecated. Use the setFullYear() method instead
+| date.toDateString()         | Converts the date portion of a Date object into a readable string
+| date.toGMTString()          | Deprecated. Use the toUTCString() method instead
+| date.toISOString()          | Returns the date as a string, using the ISO standard
+| date.toJSON()               | Returns the date as a string, formatted as a JSON date
+| date.toLocaleDateString()   | Returns the date portion of a Date object as a string, using locale conventions
+| date.toLocaleString()       | Converts a Date object to a string, using locale conventions
+| date.toLocaleTimeString()   | Returns the time portion of a Date object as a string, using locale conventions
+| date.toString()             | Converts a Date object to a string
+| date.toTimeString()         | Converts the time portion of a Date object to a string
+| date.toUTCString()          | Converts a Date object to a string, according to universal time
+| date.UTC()                  | Returns the number of milliseconds in a date since midnight of January 1, 1970, according to UTC time
+| date.valueOf()              | Returns the primitive value of a Date object
+| number.isFinite()           | Checks whether a value is a finite number
+| number.isInteger()          | Checks whether a value is an integer
+| number.isNaN()              | Checks whether a value is Number.NaN
+| number.isSafeInteger()      | Checks whether a value is a safe integer
+| Number.MAX_VALUE            | Returns the largest number possible in JavaScript
+| Number.MIN_VALUE            | Returns the smallest number possible in JavaScript
+| Number.NaN                  | Represents a "Not-a-Number" value
+| number.toExponential(x)     | Converts a number into an exponential notation
+| number.toFixed(x)           | Formats a number with x numbers of digits after the decimal point
+| number.toLocaleString()     | Converts a number into a string, based on the locale settings
+| number.toPrecision(x)       | Formats a number to x length
+| number.toString()           | Converts a number to a string
+| number.valueOf()            | Returns the primitive value of a number
+| string.charAt()             | Returns the character at the specified index (position)
+| string.charCodeAt()         | Returns the Unicode of the character at the specified index
+| string.concat()             | Joins two or more strings, and returns a new joined strings
+| string.endsWith()           | Checks whether a string ends with specified string/characters
+| string.fromCharCode()       | Converts Unicode values to characters
+| string.includes()           | Checks whether a string contains the specified string/characters
+| string.indexOf()            | Returns the position of the first found occurrence of a specified value in a string
+| string.lastIndexOf()        | Returns the position of the last found occurrence of a specified value in a string
+| string.length               | Returns the length of a string
+| string.localeCompare()      | Compares two strings in the current locale
+| string.match()              | Searches a string for a match against a regular expression, and returns the matches
+| string.repeat()             | Returns a new string with a specified number of copies of an existing string
+| string.replace()            | Replaces every occurrence of a substring (string literal or regex)
+| string.search()             | Returns the position of the first occurrence of a substring (string literal or regex)
+| string.slice()              | Extracts a part of a string and returns a new string
+| string.split()              | Splits a string into an array of substrings
+| string.startsWith()         | Checks whether a string begins with specified characters
+| string.string[index]        | (zero based)
+| string.substr()             | (Old -- use slice)
+| string.substring()          | (Old -- use slice)
+| string.toLocaleLowerCase()  | Converts a string to lowercase letters, according to the host's locale
+| string.toLocaleUpperCase()  | Converts a string to uppercase letters, according to the host's locale
+| string.toLowerCase()        | Converts a string to lowercase letters
+| string.toString()           | Returns the value of a String object
+| string.toUpperCase()        | Converts a string to uppercase letters
+| string.trim()               | Removes whitespace from both ends of a string
+| string.valueOf()            | Returns the primitive value of a String object
+|===
