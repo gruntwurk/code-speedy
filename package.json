@@ -63,7 +63,8 @@
 		"testEnvironment": "node",
 		"roots": [
 			"node_modules",
-			"src"
+			"src",
+			"tests"
 		],
 		"moduleDirectories": [
 			"node_modules"

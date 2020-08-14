@@ -67,8 +67,7 @@ export function homogenizeMacroDef(macroDef: any[]): boolean {
  * Returns undefined if no valid command type was found.
  */
 export function extractCommand(action: string[]): ActionCommandType | undefined {
-    let actionType: ActionCommandType = ActionCommandType.command;
-    let cmdTypeName = action[0].split(":", 2)[0].trim();
+    let cmdTypeName = action[0].split(":", 2)[0].trim().toLowerCase();
     return actionTypeSynonymns[cmdTypeName];
 }
 
