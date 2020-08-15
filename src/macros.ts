@@ -1,15 +1,11 @@
 import { readFileSync }  from 'fs';
 import * as vscode from 'vscode';
-import { escapeRegExp, onlyUnique } from './utils';
 import { VariableDefs } from './variables';
-import { SSL_OP_NETSCAPE_DEMO_CIPHER_CHANGE_BUG } from 'constants';
-import { ActionCommandType, MacroAction } from './actions';
-import { open } from 'fs';
+import { ActionType, MacroAction } from './actions';
 
 const MACRO_PREFIX = "speedy.";
-const MACRO_NAME_PATTERN = /^\[(\w+)\]\s*/
-const ACTION_TYPE_PATTERN = /^(\w+):\s*/
-
+const MACRO_NAME_PATTERN = /^\[(\w+)\]\s*/;
+const ACTION_TYPE_PATTERN = /^(\w+):\s*/;
 
 interface MacroDict {
     [name: string]: MacroDef;
@@ -31,7 +27,7 @@ export class MacroDef {
         if (!this.registered) {
             console.log(`Registering ${MACRO_PREFIX}${this.name}`);
             this.disposable = vscode.commands.registerTextEditorCommand(`${MACRO_PREFIX}${this.name}`, () => this.execute());
-            this.parent.context.subscriptions.push(this.disposable);
+            this.parent.context?.subscriptions.push(this.disposable);
             this.registered = true;
         }
     }
@@ -51,11 +47,10 @@ export class MacroDef {
 
 export class SpeedyMacros  {
     disposables: vscode.Disposable[] = [];
-    context: vscode.ExtensionContext;
+    context: vscode.ExtensionContext | undefined;
     macroDefs: MacroDict = {};
 
-
-    constructor(context: vscode.ExtensionContext) {
+    constructor(context: vscode.ExtensionContext | undefined) {
         this.context = context;
     }
 
@@ -69,7 +64,8 @@ export class SpeedyMacros  {
         let currentMacro: MacroDef | undefined = undefined;
         let currentAction: MacroAction | undefined = undefined;
         let actionNumber = 0;
-        for (let line of text) {
+        let textLines = text.split("\n");
+        for (let line of textLines) {
             if (line.trim().length === 0) {
                 // ignore blank lines unless they are part of an action's steps
                 if (currentAction === undefined) {
@@ -84,7 +80,7 @@ export class SpeedyMacros  {
                 continue;
             }
             if (currentMacro === undefined) {
-                issues.push(`Warning: Skipping invalid text above first macro definition.`)
+                issues.push(`Warning: Skipping invalid text above first macro definition.`);
                 continue;
             }
             m = line.match(ACTION_TYPE_PATTERN);
@@ -100,10 +96,10 @@ export class SpeedyMacros  {
                 continue;
             }
             if (currentAction === undefined) {
-                issues.push(`Warning: Skipping invalid text between macro name and first action definition.`)
+                issues.push(`Warning: Skipping invalid text between macro name and first action definition.`);
                 continue;
             }
-            if (currentAction.actionType === ActionCommandType.snippet) {
+            if (currentAction.actionType === ActionType.snippet) {
                 currentAction.steps.push(line);
             } else {
                 currentAction.steps.push(line.trim());

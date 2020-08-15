@@ -1,0 +1,11 @@
+[unMultiSelectLast]
+description:
+	For when you Ctrl-Click to multiselect 10 times and on the eleventh get it wrong.
+	Just press Ctrl-0 (or whatever key you assign) to unselect the eleventh, then carry on.
+	(See also, https://github.com/danseethaler/vscode-tab-through-selections, for more along this line.)
+javascript:
+	const editor = window.activeTextEditor;
+	const newSelections = editor.selections.slice(0, editor.selections.length - 1);
+	editor.selections = newSelections;
+
+

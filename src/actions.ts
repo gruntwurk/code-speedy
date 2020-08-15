@@ -7,7 +7,8 @@ const { window } = require("vscode");
 import path = require("path");
 
 
-export enum ActionCommandType {
+export enum ActionType {
+    description = "DESC",
     command = "CMD",
     javascript = "JS",
     shellscript = "SHELL",
@@ -16,18 +17,20 @@ export enum ActionCommandType {
 }
 
 export const actionTypeSynonymns = {
-    "cmd": ActionCommandType.command,
-    "command": ActionCommandType.command,
-    "js": ActionCommandType.javascript,
-    "javascript": ActionCommandType.javascript,
-    "shell": ActionCommandType.shellscript,
-    "shellscript": ActionCommandType.shellscript,
-    "vars": ActionCommandType.variables,
-    "variables": ActionCommandType.variables,
-    "snip": ActionCommandType.snippet,
-    "snippet": ActionCommandType.snippet
+    "desc": ActionType.description,
+    "description": ActionType.description,
+    "cmd": ActionType.command,
+    "command": ActionType.command,
+    "js": ActionType.javascript,
+    "javascript": ActionType.javascript,
+    "shell": ActionType.shellscript,
+    "shellscript": ActionType.shellscript,
+    "vars": ActionType.variables,
+    "variables": ActionType.variables,
+    "snip": ActionType.snippet,
+    "snippet": ActionType.snippet
 } as {
-    [key: string]: ActionCommandType
+    [key: string]: ActionType
 };
 
 interface CommandArgs {
@@ -37,7 +40,7 @@ interface CommandArgs {
 export class MacroAction {
     parent: MacroDef;
     sequenceNumber: number;
-    actionType: ActionCommandType | undefined = undefined;
+    actionType: ActionType | undefined = undefined;
     steps: string[] = [];
 
     constructor(parent: MacroDef, sequenceNumber: number, actionTypeString: string) {
@@ -52,15 +55,17 @@ export class MacroAction {
             return;
         }
         let outcome: boolean;
-        if (this.actionType === ActionCommandType.variables) {
+        if (this.actionType === ActionType.description) {
+            // nothing to do
+        } else if (this.actionType === ActionType.variables) {
             this.parent.varDefs.addVariables(this.steps);
-        } else if (this.actionType === ActionCommandType.command) {
+        } else if (this.actionType === ActionType.command) {
             outcome = await this.runCommand();
-        } else if (this.actionType === ActionCommandType.javascript) {
+        } else if (this.actionType === ActionType.javascript) {
             outcome = await this.runJS();
-        } else if (this.actionType === ActionCommandType.shellscript) {
+        } else if (this.actionType === ActionType.shellscript) {
             outcome = await this.runShellScript();
-        } else if (this.actionType === ActionCommandType.snippet) {
+        } else if (this.actionType === ActionType.snippet) {
             outcome = await this.runSnippet();
         } else {
             console.error(`Unimplenented action type encountered: ${this.actionType}`);

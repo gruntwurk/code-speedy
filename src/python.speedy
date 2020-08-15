@@ -1,0 +1,85 @@
+[transformToSnake]
+description:
+	A multi-select friendly macro to convert from CamelCase to snake_case.
+	If any particular selection is empty (just a cursor), this will automatically expand it to the whole word first.
+	(Kudos to https://stackoverflow.com/users/398630/brainslugs83 for some pointers)
+javascript:
+	let editor = window.activeTextEditor;
+	expandWords();
+	doTransform(0);
+	function expandWords() { let sels = editor.selections; let i = sels.length-1;
+	  while (i >=0) { let sel = sels[i];
+	    if (sel.isEmpty) {r = editor.document.getWordRangeAtPosition(sel.start); sels[i] = new vscode.Selection(r.start, r.end);}
+	    i--; }
+	  editor.selections = sels;
+	}
+	function doTransform(i) { let sels = editor.selections;
+	  if (i < 0 || i >= sels.length) { return; }
+	  let sel = sels[i];
+	  let word_matches = editor.document.getText(sel).matchAll(/([a-z]+|[A-Z][a-z]*|[^A-Za-z]+)/g);
+	  let words = [];
+	  for (const match of word_matches) {words.push(match[0].toLowerCase())};
+	  editor.edit(eb => {eb.replace(sel, words.join('_'))}).then(x => { doTransform(i+1); });
+	}
+
+
+
+[transformToCamel]
+description:
+	Same as transformToSnake, but vice versa
+javascript:
+	let editor = window.activeTextEditor;
+	expandWords();
+	doTransform(0);
+	function expandWords() { let sels = editor.selections; let i = sels.length-1;
+	  while (i >=0) { let sel = sels[i];
+	    if (sel.isEmpty) {r = editor.document.getWordRangeAtPosition(sel.start); sels[i] = new vscode.Selection(r.start, r.end);}
+	    i--; }
+	  editor.selections = sels;
+	}
+	function doTransform(i) { let sels = editor.selections;
+	  if (i < 0 || i >= sels.length) { return; }
+	  let sel = sels[i];
+	  let words = editor.document.getText(sel).split('_')
+	  let camel_words = words.map(function(w) {return w[0].toUpperCase() + w.slice(1,).toLowerCase()});
+	  editor.edit(eb => {eb.replace(sel, camel_words.join(''))}).then(x => { doTransform(i+1); });
+	}
+
+
+
+[pytestForFunction]
+cmd:
+    cursorHome
+javascript:
+    const editor = window.activeTextEditor;
+    const doc = window.activeTextEditor.document;
+    let parts = doc.lineAt(window.activeTextEditor.selection.start).text.split('(');
+    let function_name = parts[0].replace('def ','').trim();
+    parts = parts[1].split(')');
+    let args = parts[0].split(',');
+    parts = parts[1].replace('->','').split(':');
+    let hint = parts[0];
+    let arg_names = [];
+    let arg_vals = [];
+    args.forEach(function(arg){
+        let parts = arg.split('=');
+        let val = (parts.length >= 2) ? parts[1].trim() : '';
+        parts = parts[0].split(':');
+        let arg_name = parts[0].trim();
+        let hint = (parts.length >= 2) ? parts[1].trim() : '';
+        if (val == ''){val = (hint == 'int') ? '123' : '\"abc\"'};
+        arg_names.push(arg_name);
+        arg_vals.push(val);
+    });
+    parts = (doc.isUntitled ? '' : doc.fileName).split('.')[0].split('\\\\')
+    let unit_name = parts.slice(parts.length-3).join('.');
+    let unit_test = '# TODO Move this to test_' + unit_name + '.py\\nfrom ..' + unit_name + ' import ' + function_name +'\\n';
+    unit_test += 'def test_' + function_name + '():\\n\\t';
+    if (arg_names.length >= 0) {
+        if (arg_names.length > 1){ unit_test += '(' + arg_names.join(',') + ')'; } else { unit_test += arg_names[0]; }
+        unit_test += ' = ';
+        if (arg_vals.length > 1){unit_test += '(' + arg_vals.join(',') + ')'; } else {unit_test += arg_vals[0]; }
+    }
+    unit_test += '\\n\\tassert ' + function_name + '(' + arg_names.join(',') + ') == ' + arg_vals[0] + '\\n\\n\\n';
+    let start_of_line = window.activeTextEditor.selection.start;
+    editor.edit(edit_builder => {edit_builder.insert(start_of_line, unit_test)})

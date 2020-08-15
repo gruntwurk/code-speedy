@@ -1,0 +1,69 @@
+[openNewTerminal]
+command:
+	workbench.action.terminal.new
+command:
+	workbench.action.terminal.sendSequence
+	text = "echo hello\n"
+
+
+
+[printToNewTerminal]
+cmd:
+	 workbench.action.terminal.new
+vars:
+	$currentFile = window.activeTextEditor.document.uri.fsPath
+	$currentFolder = vscode.workspace.rootPath
+command:
+	workbench.action.terminal.sendSequence
+	text = "echo the current file is: $currentFile\necho the current folder is: $currentFolder\n"
+
+
+
+[userInputViaJavascript]
+javascript:
+	let response = await window.showInputBox()
+	window.showInformationMessage(`You entered: ${response}`)
+
+
+
+[clipCurrentWord]
+description:
+    Copies the word under the cursor to the clipboard
+    (without affecting the cursor/selection).
+js:
+	const doc = window.activeTextEditor.document
+	let cursorPos = window.activeTextEditor.selection.start)
+	let word = doc.getText(doc.getWordRangeAtPosition(cursorPos))
+	(TBD push the word into the clipboard)
+
+
+
+[shellExample]
+description:
+	Example of running a shell script in the background.
+	IMPORTANT: don't start a shell command here that doesn't finish!
+	There's no good way of killing/canceling it.
+	(Yes, the echo in step 2 will never be seen.)
+shell:
+	touch .gitignore
+	echo hello
+
+
+
+[anotherShellExqample]
+vars:
+	$currentFolder = vscode.workspace.rootPath
+shell: cd \"$currentFolder\"
+	touch .gitignore
+
+
+
+[invokeSomeNamedSnippet]
+command:
+	type
+	text = "mySnippetPrefixHere"
+command:
+	insertSnippet
+
+
+
