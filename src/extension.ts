@@ -1,26 +1,21 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import * as vscode from 'vscode';
-import { homogenizeMacroDef, extractCommand, ActionCommandType, runJS, runCommand, runSnippet, runShellScript } from './actions';
 
-import { VariableDefs } from './variables';
 import { window } from "vscode";
-import path = require("path");
+import { SpeedyMacros } from './macros';
 
-let activeContext: vscode.ExtensionContext;
-let disposables: vscode.Disposable[] = [];
-let macros: vscode.WorkspaceConfiguration;
-let nonMacroAttributes = ["has", "get", "update", "inspect"];
+let speedyConfig: vscode.WorkspaceConfiguration;
+// let nonMacroAttributes = ["has", "get", "update", "inspect"];
+let macros:SpeedyMacros;
 
 export function activate(context: vscode.ExtensionContext) {
+	macros = new SpeedyMacros(context);
 	loadcommands();
-	loadMacros(context);
-	activeContext = context;
+	loadMacros();
 
 	vscode.workspace.onDidChangeConfiguration(() => {
-		for (let disposable of disposables) {
-			disposable.dispose();
-		}
-		loadMacros(activeContext);
+		macros.unloadAll();
+		loadMacros();
 	});
 
 }
@@ -32,10 +27,9 @@ function loadcommands() {
 	// create a command for running macros by name
 	console.log("Registering macro.run");
 	vscode.commands.registerCommand("macros.run", async () => {
-		let macroNames = Object.keys(macros).filter(each => macros[each] instanceof Array);
-		let selection = await window.showQuickPick(macroNames);
+		let selection = await window.showQuickPick(macros.getNames());
 		if (selection) {
-			executeMacro(selection);
+			macros.getMacro(selection).execute();
 		}
 	});
 
@@ -55,62 +49,23 @@ function loadcommands() {
 		window.showInformationMessage(`Congratulations you ran the dummy command`);
 	});
 }
-function loadMacros(context: vscode.ExtensionContext) {
-	macros = vscode.workspace.getConfiguration("macros");
 
-	// Register each macro as a command
-	for (const name in macros) {
-		if (nonMacroAttributes.includes(name)) {
-			continue;
-		}
 
-		let macroDef = macros[name];
-		// console.log(`Macro ${name} is ${typeof macroDef}`);
-		if (!((macroDef instanceof Array) || (typeof macroDef === "string"))) {
-			console.error(`Macro ${name} is not defined with an array. Skipping.`);
-			continue;
+function loadMacros() {
+	speedyConfig = vscode.workspace.getConfiguration("speedy.macros");
+	let fileList: string[] = [];
+	if (speedyConfig.has("file")) {
+		fileList.push(speedyConfig.file);
+	}
+	if (speedyConfig.has("files")) {
+		fileList.push.apply(null,speedyConfig.files);
+	}
+
+	for (const filename in fileList) {
+		let issues = macros.readSpeedyFile(filename);
+		for (let issue of issues) {
+			console.error(issue);
 		}
-		console.log(`Registering macros.${name}`);
-		const disposable = vscode.commands.registerTextEditorCommand(`macros.${name}`, () => executeMacro(name));
-		context.subscriptions.push(disposable);
-		disposables.push(disposable);
+		macros.registerAll();
 	}
 }
-
-
-async function executeMacro(name: string) {
-	let varDefs = new VariableDefs();
-	let macroDef = macros[name];
-	if (!homogenizeMacroDef(macroDef)) {
-		console.error(`The ${name} macro is not properly defined as a list of lists of strings.`);
-		return;
-	}
-	let actionNumber = 0;
-	for (let action of macroDef) {
-		actionNumber++;
-		// action is a list of strings (e.g. lines of javascript)
-		// The first line must begin with the action type followed by a colon
-		let actionType = extractCommand(action);
-		if (actionType === undefined) {
-			console.error(`Action #${actionNumber} of the ${name} macro does not specify a valid action type. Skipping.`);
-			continue;
-		}
-		let outcome: boolean;
-		if (actionType === ActionCommandType.variables) {
-			varDefs.addVariables(action);
-		} else if (actionType === ActionCommandType.command) {
-			outcome = await runCommand(action, varDefs);
-		} else if (actionType === ActionCommandType.javascript) {
-			outcome = await runJS(action, varDefs);
-		} else if (actionType === ActionCommandType.shellscript) {
-			outcome = await runShellScript(action, varDefs);
-		} else if (actionType === ActionCommandType.snippet) {
-			outcome = await runSnippet(action, varDefs);
-		} else {
-			console.error(`Unimplenented action type encountered: ${actionType}`);
-		}
-	}
-}
-
-
-

@@ -4,7 +4,7 @@
 == Features
 
 Visual Studio Code does not have a macro-recording capability for automating tasks.
-Snippets are the only things that come close. 
+Snippets are the only things that come close.
 There have been a few takes on creating extensions that approximate the idea of recording macros (except that "`recording`" is really "`programming`").
 (See History, below.)
 This is my take.
@@ -37,14 +37,14 @@ Then, open your VS Code settings.json and create a new `code-speedy` section:
 
 . Click on the gear-icon (lower left).
 . Select "`Settings.`"
-. Press the open-settings icon in the top right corner. 
-(It used to look like {}, but now it looks like a dog-eared page with a wrap-around arrow.) 
+. Press the open-settings icon in the top right corner.
+(It used to look like {}, but now it looks like a dog-eared page with a wrap-around arrow.)
 . Add a section that goes something like this:
 
 [source:json]
 ----
-"code-speedy": {
-    "macro-files": [ 
+"speedy.macros": {
+    "files": [
     	"/work/universal-macros.speedy",
     	"~personal-macros.speedy",
     	"project-macros.speedy",
@@ -116,9 +116,9 @@ The `window` object is actually a synonym for `vscode.window`.
 
 ----
 [openNewTerminal]
-command: 
+command:
 	workbench.action.terminal.new
-command: 
+command:
 	workbench.action.terminal.sendSequence
 	text = "echo hello\n"
 
@@ -133,21 +133,21 @@ command:
 	text = "echo the current file is: $currentFile\necho the current folder is: $currentFolder\n"
 
 [showMessageViaJavascript]
-js: 
+js:
 	window.showInformationMessage(`You entered: ${await window.showInputBox()}`
 
 [userInputViaJavascript]
-javascript: 
+javascript:
 	let response = await window.showInputBox()
 	await window.showInformationMessage(`You entered: ${response}`)
 
 [shellExample]
 description:
 	Example of running a shell script in the background.
-	IMPORTANT: don't start a shell command here that doesn't finish! 
+	IMPORTANT: don't start a shell command here that doesn't finish!
 	There's no good way of killing/canceling it.
 	(Yes, the echo in step 2 will never be seen.)
-shell: 
+shell:
 	touch .gitignore
 	echo hello
 
@@ -158,16 +158,16 @@ shell: cd \"$currentFolder\"
 	touch .gitignore
 
 [invokeSomeNamedSnippet]
-command: 
+command:
 	type
 	text = "mySnippetPrefixHere"
-command: 
+command:
 	insertSnippet
 
 
 [unMultiSelectLast]
 description:
-	For when you Ctrl-Click to multiselect 10 times and on the eleventh get it wrong. 
+	For when you Ctrl-Click to multiselect 10 times and on the eleventh get it wrong.
 	Just press Ctrl-0 (or whatever key you assign) to unselect the eleventh, then carry on.
 	(See also, https://github.com/danseethaler/vscode-tab-through-selections, for more along this line.)
 javascript:
@@ -221,13 +221,13 @@ javascript:
 	}
 
 [userInput]
-javascript: 
+javascript:
 	let response = await window.showInputBox()
 	await window.showInformationMessage(`You entered: ${response}`)
 
 
 [clipCurrentWord]
-js: 
+js:
 	const doc = window.activeTextEditor.document
 	let cursorPos = window.activeTextEditor.selection.start)
 	let word = doc.getText(doc.getWordRangeAtPosition(cursorPos))
@@ -240,8 +240,8 @@ To open the VS Code keybindings.json file...
 
 . Click on the gear-icon (lower left).
 . Select "`Keyboard Shortcuts`"
-. Press the open-settings icon in the top right corner. 
-(It used to look like {}, but now it looks like a dog-eared page with a wrap-around arrow.) 
+. Press the open-settings icon in the top right corner.
+(It used to look like {}, but now it looks like a dog-eared page with a wrap-around arrow.)
 . All of the `"command":`s can be copied and pasted from here.
 
 == The Standard Variables

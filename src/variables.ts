@@ -1,8 +1,5 @@
 import { escapeRegExp, onlyUnique } from './utils';
 
-let variableNames: string[] = [];
-let variableExpressions: string[] = [];
-
 const standardVariablesAction = [
     "vars:",
     "CLIPBOARD = vscode.env.clipboard.readText()",
@@ -30,11 +27,13 @@ const standardVariablesAction = [
     "WORKSPACE_NAME = vscode.workspace.name"
 ];
 
+interface VariableDict {
+    [name: string]: string;
+}
 
 
 export class VariableDefs {
-    variableNames: string[] = [];
-    variableExpressions: string[] = [];
+    variableDict: VariableDict = {};
 
     /**
      * Appends the contents of the given "action" (a list of variable definitions)
@@ -60,44 +59,22 @@ export class VariableDefs {
                 varName = varName.slice(1);
             }
             if (parts.length > 1) {
-                let varExpresion = parts[1].trim();
+                varExpresion = parts[1].trim();
             }
             if (varExpresion) {
-                this.addVariable(varName, varExpresion);
+                this.variableDict[varName] = varExpresion;
             } else {
-                this.removeVariable(varName);
+                delete this.variableDict[varName];
             }
         }
     };
 
-    addVariable(varName: string, varExpresion: string) {
-        let i = variableNames.indexOf(varName);
-        if (i === -1) {
-            variableNames.push(varName);
-            variableExpressions.push(varExpresion);
-        } else {
-            variableExpressions[i] = varExpresion;
-        }
-    }
-
-    removeVariable(varName: string) {
-        let i = variableNames.indexOf(varName);
-        if (i > -1) {
-            variableNames.splice(i, 1);
-            variableExpressions.splice(i, 1);
-        }
-    }
-
     /**
      * Executes the expression associated with the given variable name and returns the result.
-     * Returns null if no such variable is defined.
      */
     evaluateVariable(varName: string): any {
-        let i = variableNames.indexOf(varName);
-        if (i > -1) {
-            return eval(variableExpressions[i]);
-        }
-        return null;
+         //TODO does var exist?
+       return eval(this.variableDict[varName]);
     }
 
     /**
@@ -132,9 +109,9 @@ export class VariableDefs {
         return adjustedText;
     }
 
-    findAllVariablePlaceholders(action: string[]): string[] {
+    findAllVariablePlaceholders(actionSteps: string[]): string[] {
         const regexp = /(\$\w+|\$\{\w+\})/g;
-        const matches = action.join("\n").matchAll(regexp);
+        const matches = actionSteps.join("\n").matchAll(regexp);
         let varsFound = [];
         for (const match of matches) {
             varsFound.push(match[1]);
