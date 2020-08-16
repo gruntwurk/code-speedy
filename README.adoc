@@ -1,39 +1,42 @@
-= code-speedy
-
+= code-speedy: A VS Code Extension to Automate Almost Anything Four Differentg Ways
 
 == Features
 
 Visual Studio Code does not have a macro-recording capability for automating tasks.
-Snippets are the only things that come close.
+Snippets come close.
 There have been a few takes on creating extensions that approximate the idea of recording macros (except that "`recording`" is really "`programming`").
 (See History, below.)
 This is my take.
 
-Basically, this extension allows you configure any number of macros and assign them each a shortcut key sequence.
-Here we define a "`macro`" as a list of "`actions.`"
+Basically, this extension allows you configure any number of "`macros`" and assign them each a shortcut key sequence.
+Here we'll define a macro as a list of "`actions.`"
 And an action is, in turn, a list of "`steps.`"
 
 There are several action types:
 
-* *command* -- Executes a VS Code command with or without arguments. (Anything you can assign a shortcut sequence to is a "`command.`")
-* *javascript* -- Execute some arbitrary JavaScript code, with full access to the VS Code API.
-* *shellscript* -- Execute a shell script (in a hidden terminal window).
-* *snippet* -- Inserts an arbirary snippet (that is, where you define the snippet template right there as this action's steps. (If you want to invoke an existing snippet by its prefix, there's a command for that.)
-* *variables* -- Define a set of variables using JavaScript expressions. The calculated values are inserted into named placeholders in any of the above (command arguments, javascript code, shell script code, snippet templates).
-* *description* -- (not implemented yet) does nothing (just a convenient way to document what the macro does).
-* *shortcut* -- (not implemented yet) a default keyboard shortcut to assign
+* *command* -- Executes a VS Code command with or without arguments.
+(Anything you can assign a shortcut sequence to is a "`command.`")
+* *javascript* -- Executes some arbitrary JavaScript code, with full access to the VS Code API.
+* *shellscript* -- Executes a shell script (in a hidden terminal window).
+* *snippet* -- Inserts an arbirary snippet, that is, where you define the snippet template right there as this action's steps.
+(If you want to invoke an existing snippet by its prefix, there's a command for that.)
+* *variables* -- Defines a set of variables using JavaScript expressions for the duration of the macro.
+The calculated values are then inserted into named placeholders in any of the other action steps (command arguments, javascript code, shell script code, snippet template text).
+* *description* -- Does nothing (just a convenient way to document what the macro does).
+* *speedy* -- Sets various directives (e.g. `verbose = true`, `context = python`) for the duration of the macro.
+(`context` is not implemented yet.)
+* *shortcut* -- (not implemented yet) Directly assigns a keyboard shortcut, if one is not already assigned.
 
 A macro can mix and match all of these.
-For example:
+For example, the `pytestForFunction` macro in the `python.speedy` sample, uses five different actions (speedy, commmand, variables, javascript, snippet).
 
-TBD
 
 
 == Installation
 
-First, install the code-speedy extension (more TBD).
+First, install the code-speedy extension via the marketplace.
 
-Then, open your VS Code settings.json and create a new `code-speedy` section:
+Then, open your VS Code settings.json and create a new `code-speedy` section, as follows:
 
 . Click on the gear-icon (lower left).
 . Select "`Settings.`"
@@ -54,8 +57,11 @@ Then, open your VS Code settings.json and create a new `code-speedy` section:
 ----
 
 * You can name these files anything you want. Using a `.speedy` extension is just a suggestion.
-* Paths are relative to (TBD).
-* On Windows, a leading ~ is changed to `%USERPROFILE%\`
+* Paths are relative to the current working folder.
+* (Not implemented yet) On Windows, a leading ~ is changed to `%USERPROFILE%\`
+* If speedy can't find a particular file, it just skips it.
+For example, if speedy is given the configuration above, then it'll look for a `project-macros.speedy` in the current working folder, but if there isn't one, that's not a problem.
+
 
 == Invoking a Macro
 
@@ -72,38 +78,101 @@ All of the code-speedy macros have a "speedy." prefix.
 
 == Macro Elements: Commands and Modifiers
 
-Again, a "`macro`" consist of "`actions,`" and each action consists of "`steps.`"
-A step is simply a line of text (a string).
-So, an action is a list (array) of strings.
-And a macro, therefore is a list of lists of strings.
+Macro(s) are defined in plain text file(s).
+A macro starts with the a macro name in square brackets.
+That is followed by one or more actions.
+An action starts with the action type followed by a colon, on a line by itself.
+It is important that both the macro name and the action type be left aligned (not indented).
+Any lines that follow an action type are considered the steps for that action -- until another action type or another macro name declaration is encountered.
 
-The first step (line) of each action specifies the action type (e.g. "command: cursorHome", or "javascript:")
+It's typical to indent the action steps for two reasons: (1) it makes it easier to read, (2) if an action step happens to look like a macro name declaration or an action type declaration, the indentaion will prevent it from being confused with one.
+The action steps of a snippet action (i.e. the text of the snippet tempate) is the only exception.
+If you indent any of those lines, then that indenation will be part of the template.
+Speaking of which, for all other action types, speedy will skip blank lines and comment lines (that begin with //), but any such lines in a snippet will be preserved.
 
-There are currently five action types:
+----
+[pytestForFunction]
+speedy:
+	// These comments are ignored
+	// Note: currently, if you set verbose = false, that will set it to "false" a non-empty string.
+	// So, just delete this line altogther.
+	verbose = true
+cmd:
+    cursorHome
+vars:
+	author = (group effort)
+	// "standard" (with no =) brings in twenty+ standard definitions (e.g. TODAY, WORKSPACE_NAME, TM_DIRECTORY)
+	standard
+javascript:
+	// This comment and the blank line that follows are ignored
 
+    const editor = window.activeTextEditor;         // this comment is part of the javascript (not ignored by
+    const doc = window.activeTextEditor.document;   // speedy, but then ignore by the JS interpreter)
+    let parts = doc.lineAt(window.activeTextEditor.selection.start).text.split('(');
+
+	// speedy is a special object that you can reference in your JS (along with vscode, window, and path)
+	speedy.setVariable('function_name',parts[0].replace('def ','').trim());
+    parts = parts[1].split(')');
+    let args = parts[0].split(',');
+    parts = parts[1].replace('->','').split(':');
+    let hint = parts[0];
+    let arg_names = [];
+    let arg_vals = [];
+    args.forEach(function(arg){
+        let parts = arg.split('=');
+        let val = (parts.length >= 2) ? parts[1].trim() : '';
+        parts = parts[0].split(':');
+        let arg_name = parts[0].trim();
+        let hint = (parts.length >= 2) ? parts[1].trim() : '';
+        if (val == ''){val = (hint == 'int') ? '123' : '\"abc\"'};
+        arg_names.push(arg_name);
+        arg_vals.push(val);
+    });
+    parts = (doc.isUntitled ? '' : doc.fileName).split('.')[0].split('\\\\')
+	speedy.setVariable('unit_name',parts.slice(parts.length-3).join('.'));
+	speedy.setVariable('arg_name_list',arg_names.join(','));
+	speedy.setVariable('arg_val_list',arg_vals.join(','));
+	speedy.setVariable('first_arg_val',arg_vals[0]);
+snip:
+# TODO Move this to test_$TM_FILENAME
+from ..${TM_FILENAME_BASE} import $function_name
+def test_$function_name():
+	( ${arg_name_list} ) = ( $arg_val_list )
+    assert $function_name($arg_name_list) == $first_arg_val
+
+
+----
+
+All speedy identifiers (macro names, variable names) may only consist of letters, numbers, and underscores.
+
+The following action type declarations are recognized:
+
+* *speedy:*
+* *description:* (or "desc:")
 * *command:* (or "cmd:")
 * *javascript:* (or "js:")
 * *shellscript:* (or "shell:")
 * *snippet:* (or "snip:")
 * *variables:* (or "vars:")
 
-For a command, the name of the command follows the colon.
-If the command takes any arguments, then you provide those as steps 2, 3, ...
+For a command, the name of the command goes on the next line (the first "step").
+Any arguments go on the following lines (steps 2, 3, ...).
 
-For JavaSript, a shell script, or a snippet, do not put anything after the colon in step 1.
-The code or template text begins with step 2.
+For JavaSript, a shell script, or a snippet, the code or template text begins with the next line (steps 1 thru N).
 
-For variables, either put the word "standard" after the colon in step 1, or leave it blank.
-Your variable definitions begin with step 2.
+For variables, either put the word "standard" on a line by itself, and/or list your own variable definition(s).
 A variable definition consists of a name, followed by an equal sign (=), followed by a JavaScript expression.
-The name can only consist of letters, numbers, and underscores.
-Specifying ("vars: standard") causes a dozen pre-defined variables to be loaded. (See below.)
+Again, the name can only consist of letters, numbers, and underscores.
+Specifying ("standard") causes twenty+ pre-defined variables to be loaded.
+(See complete list below.)
 
 
+Your JavaScript (in both the javascript action and the variable definitions) has access to the `speedy` object, the `vscode` object, the `window` object and the `path` object.
 
-Your JavaScript has access to the `vscode` object, the `window` object and the `path` object (from node path) -- in both the javascript action and the variables action.
-The `vscode` object (`vscode.commands`, `vscode.env`, `vscode.workspace`, `vscode.tasks`, etc.) is documented here: https://code.visualstudio.com/api/references/vscode-api.
-The `window` object is actually a synonym for `vscode.window`.
+* The `speedy` object allows for the definition of variable on the fly. It also has some helper functions that sometimes come in handy.
+* The `vscode` object (`vscode.commands`, `vscode.env`, `vscode.workspace`, `vscode.tasks`, etc.) is documented here: https://code.visualstudio.com/api/references/vscode-api.
+* The `window` object is just a synonym for `vscode.window`.
+* The `path` object is part of node.js.
 
 
 
@@ -116,6 +185,8 @@ The `window` object is actually a synonym for `vscode.window`.
 
 ----
 [openNewTerminal]
+description:
+	A simple example tha demonstrates opening a new terminal window.
 command:
 	workbench.action.terminal.new
 command:
@@ -234,20 +305,21 @@ js:
 	(TBD push the word into the clipboard)
 ----
 
-== The Command Names
+== How to Know What VS Code Commands are Available
 
-To open the VS Code keybindings.json file...
+Open the VS Code keybindings.json file...
 
 . Click on the gear-icon (lower left).
 . Select "`Keyboard Shortcuts`"
 . Press the open-settings icon in the top right corner.
 (It used to look like {}, but now it looks like a dog-eared page with a wrap-around arrow.)
-. All of the `"command":`s can be copied and pasted from here.
+. All of the commands can be copied and pasted from here.
 
 == The Standard Variables
 
-Here are the variables that get defined when you specify "vars: standard":
-NOTE: The ones that begin with TM_ are exact duplicates of the corresponding variables available in snippets.
+Here are the variables that get defined when you specify "standard" in a "vars:" action:
+NOTE: The ones that begin with TM_ are exact duplicates of the corresponding variables already available in snippets.
+This just makes them avbailable to your javascript, your shell scripts, and the command arguments, as well.
 
 [width="100%",cols="2,5",options="header"]
 |===
@@ -277,7 +349,7 @@ NOTE: The ones that begin with TM_ are exact duplicates of the corresponding var
 
 To obtain one of these variable values, use a placeholder in the form of `$variablename` or `${variablename}`.
 Either one will work.
-The second form is needed if the placeholder is immediately folloed by a letter, number, or underscore.
+TIP: The second form is required if the placeholder is immediately followed by a letter, number, or underscore.
 
 In case you are curious, here are the actual definitions:
 
@@ -288,10 +360,10 @@ In case you are curious, here are the actual definitions:
 | CURRENTFILEDIR               | path.dirname(window.activeTextEditor.document.uri.fsPath)
 | CURSOR_CHAR_NUMBER           | window.activeTextEditor.selection.start.character
 | LINE_COUNT                   | window.activeTextEditor.document.lineCount
-| MACHINE_ID                   | vscode.env.machineId (The name of computer you are running on)
-| PREFERED_LANGUAGE            | vscode.env.language ("en-US")
-| SESSION_ID                   | vscode.env.sessionId (A unique string that changes when VS Code restarts)
-| SHELL_NAME                   | vscode.env.shell (The name of the default terminal shell)
+| MACHINE_ID                   | vscode.env.machineId
+| PREFERED_LANGUAGE            | vscode.env.language
+| SESSION_ID                   | vscode.env.sessionId
+| SHELL_NAME                   | vscode.env.shell
 | TM_CURRENT_LINE              | window.activeTextEditor.document.lineAt(window.activeTextEditor.selection.start)
 | TM_CURRENT_WORD              | window.activeTextEditor.document.getText(window.activeTextEditor.document.getWordRangeAtPosition(window.activeTextEditor.selection.start))
 | TM_DIRECTORY                 | vscode.workspace.rootPath
@@ -318,24 +390,36 @@ TBD
 
 == Extension Settings
 
-Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
-
-For example:
-
-This extension contributes the following settings:
-
-* `myExtension.enable`: enable/disable this extension
-* `myExtension.thing`: set to `blah` to do something
+TBD
 
 == Known Issues
 
-TBD
+* speedy: "verbose = false" currently sets it to 'false' (string not boolean).
+* Ought to replace using eval() (in two places) with IIFE.
+
+Not yet implemented:
+
+* Syntax highlighting for .speedy files
+* Wildcards in config file names
+* Integrate with tasks(?)
+* In Windows, change a leading ~ to `%USERPROFILE%\`
+* "shortcut:" action
+* context = python option ("speedy:" action)
+
+Marketing To Do:
+
+* Publish to the marketplace
+* Add screenshots/animation to the readme.
+* Put a donate button somewhere.
+* Register a code-speedy.xxx domain and put up a landing page.
+
 
 == Release Notes
 
 TBD
 
-=== 1.0.0
+=== 0.0.1 (Alpha test)
 
-Initial release of ...
+TBD
+
 
