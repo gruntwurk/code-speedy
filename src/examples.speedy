@@ -1,3 +1,27 @@
+[listBuiltinCommands]
+description:
+	A macro that helps with creating other macros.
+	This fetches a list of all registered commands that do not take any arguments
+	(which means they can be assigned keyboard shortcuts.)
+	The list is inserted in to a new file that you can edit/save.
+command:
+	workbench.action.files.newUntitledFile
+js:
+	// Since getCommands() only returns a Promise for a string[], we have to use the then()
+	// method to register a callback function which will be called once the promise is fullfilled.
+	const SUPPRESS_INTERNAL = true;
+	vscode.commands.getCommands(SUPPRESS_INTERNAL).then(resolvedvalue => {
+		var fullText = resolvedvalue.join('\n');
+		var editor = window.activeTextEditor;
+		var cursorPos = editor.selection.start;
+		editor.edit(eb => {eb.insert(cursorPos,
+	 	'= VS Code Commands\n\nThe following are all of the VS Code commands that do not take any\narguments (which means they can be assigned keyboard shortcuts.)\n\n' +
+	 	'NOTE: See also https://code.visualstudio.com/api/references/commands\nfor the commands that do take arguments.\n\n' +
+		fullText)});
+	});
+
+
+
 [openNewTerminal]
 command:
 	workbench.action.terminal.new
@@ -50,7 +74,7 @@ shell:
 
 
 
-[anotherShellExqample]
+[anotherShellExample]
 vars:
 	$currentFolder = vscode.workspace.rootPath
 shell: cd \"$currentFolder\"

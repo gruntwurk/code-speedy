@@ -5,6 +5,7 @@
 [width="100%",cols="2,5",options="header"]
 |===
 | Operator                      | Syntax
+| Spread                        | `...`
 | Bitwise AND                   | `&`
 | Bitwise Left Shift            | `<<`
 | Bitwise Left Shift            | `>`

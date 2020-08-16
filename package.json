@@ -3,6 +3,11 @@
 	"displayName": "code-speedy (macro loader)",
 	"description": "Creates commands from configured macros.",
 	"version": "0.0.1",
+	"publisher": "gruntwurk",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/gruntwurk/code-speedy.git"
+	},
 	"engines": {
 		"vscode": "^1.47.0"
 	},
@@ -16,19 +21,19 @@
 	"contributes": {
 		"configuration": {
 			"type": "object",
-			"title": "Macros configuration",
+			"title": "Code-Speedy configuration",
 			"properties": {
-				"macros": {}
+				"speedy": {}
 			}
 		},
 		"commands": [
 			{
-				"command": "macros.run",
-				"title": "Macros: Run A Macro"
+				"command": "speedy.run",
+				"title": "Speedy: Run A Macro"
 			},
 			{
-				"command": "macros.dummy",
-				"title": "Macro Dummy"
+				"command": "speedy.dummy",
+				"title": "Speedy: Dummy Macro"
 			}
 		]
 	},

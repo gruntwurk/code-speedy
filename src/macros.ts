@@ -10,6 +10,9 @@ const ACTION_TYPE_PATTERN = /^(\w+):\s*/;
 interface MacroDict {
     [name: string]: MacroDef;
 }
+interface OptionsDict {
+    [name: string]: any;
+}
 
 export class MacroDef {
     parent: SpeedyMacros;
@@ -18,6 +21,7 @@ export class MacroDef {
     disposable: vscode.Disposable | null = null;
     varDefs = new VariableDefs();
     registered: boolean = false;
+    options: OptionsDict = {"verbose": false};
 
     constructor(parent: SpeedyMacros, name: string) {
         this.parent = parent;
@@ -55,6 +59,7 @@ export class SpeedyMacros  {
     }
 
     readSpeedyFile(filename: string): string[] {
+        console.log(`Loading macros from ${filename}`);
         //TODO does file exist?
         let text = readFileSync(filename, 'utf8');
         return this.parseMacroDefinitions(text);
@@ -65,24 +70,32 @@ export class SpeedyMacros  {
         let currentAction: MacroAction | undefined = undefined;
         let actionNumber = 0;
         let textLines = text.split("\n");
+        console.log(`Loading ${textLines.length} lines worth of macros.`);
         for (let line of textLines) {
-            if (line.trim().length === 0) {
-                // ignore blank lines unless they are part of an action's steps
-                if (currentAction === undefined) {
+            // We need to preserve the formatting of snippet steps.
+            // For everything else, we can drop blank lines and comments
+            // (But we can't unindent yet.)
+            if (!(currentAction?.actionType === ActionType.snippet)) {
+                let previewLine = line.trim();
+                if (previewLine.length === 0 || previewLine.startsWith("//")) {
                     continue;
                 }
             }
+
             let m = line.match(MACRO_NAME_PATTERN);
             if (m) {
                 currentMacro = new MacroDef(this,m[1]);
+                console.log(`Loading ${currentMacro.name} macro.`);
                 currentAction = undefined;
                 this.macroDefs[currentMacro.name] = currentMacro;
                 continue;
             }
+
             if (currentMacro === undefined) {
                 issues.push(`Warning: Skipping invalid text above first macro definition.`);
                 continue;
             }
+
             m = line.match(ACTION_TYPE_PATTERN);
             if (m) {
                 let newAction = new MacroAction(currentMacro, ++actionNumber, m[1]);
@@ -95,15 +108,15 @@ export class SpeedyMacros  {
                 }
                 continue;
             }
+
             if (currentAction === undefined) {
                 issues.push(`Warning: Skipping invalid text between macro name and first action definition.`);
                 continue;
             }
-            if (currentAction.actionType === ActionType.snippet) {
-                currentAction.steps.push(line);
-            } else {
-                currentAction.steps.push(line.trim());
+            if (!(currentAction?.actionType === ActionType.snippet)) {
+                line = line.trim();
             }
+            currentAction.steps.push(line);
         }
         return issues;
     }

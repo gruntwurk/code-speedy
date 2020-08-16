@@ -1,4 +1,6 @@
 [transformToSnake]
+speedy:
+	verbose = true
 description:
 	A multi-select friendly macro to convert from CamelCase to snake_case.
 	If any particular selection is empty (just a cursor), this will automatically expand it to the whole word first.
@@ -25,6 +27,8 @@ javascript:
 
 
 [transformToCamel]
+speedy:
+	verbose = true
 description:
 	Same as transformToSnake, but vice versa
 javascript:
@@ -48,6 +52,8 @@ javascript:
 
 
 [pytestForFunction]
+speedy:
+	verbose = true
 cmd:
     cursorHome
 javascript:
