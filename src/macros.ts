@@ -36,7 +36,12 @@ export class MacroDef {
         }
     }
     unload() {
-        this.disposable?.dispose;
+        console.log(`Unloading ${this.name}`);
+        if (this.disposable) {
+            this.disposable.dispose;
+        } else {
+            console.error(`Can't unload ${this.name} -- no disposable.`);
+        }
         this.registered = false;
     }
     async execute() {
@@ -64,6 +69,23 @@ export class SpeedyMacros  {
         let text = readFileSync(filename, 'utf8');
         return this.parseMacroDefinitions(text);
     }
+
+    /**
+     * Constructs a new MacroDef, or reuses an existing one if there already is one by that name.
+     */
+    newOrUsedMacroDef(macroName: string): MacroDef {
+        let mdef = this.macroDefs[macroName];
+        if (mdef) {
+            console.log(`Reloading ${mdef.name} macro.`);
+            mdef.actions = [];
+        } else {
+            mdef = new MacroDef(this, macroName);
+            this.macroDefs[mdef.name] = mdef;
+            console.log(`Loading ${mdef.name} macro.`);
+        }
+        return mdef;
+    }
+
     parseMacroDefinitions(text: string): string[] {
         let issues: string[] = [];
         let currentMacro: MacroDef | undefined = undefined;
@@ -84,10 +106,8 @@ export class SpeedyMacros  {
 
             let m = line.match(MACRO_NAME_PATTERN);
             if (m) {
-                currentMacro = new MacroDef(this,m[1]);
-                console.log(`Loading ${currentMacro.name} macro.`);
+                currentMacro = this.newOrUsedMacroDef(m[1]);
                 currentAction = undefined;
-                this.macroDefs[currentMacro.name] = currentMacro;
                 continue;
             }
 

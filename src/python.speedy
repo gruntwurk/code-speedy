@@ -7,21 +7,18 @@ description:
 	(Kudos to https://stackoverflow.com/users/398630/brainslugs83 for some pointers)
 javascript:
 	let editor = window.activeTextEditor;
-	expandWords();
+	speedy.expandAllSelectionsToWords();
 	doTransform(0);
-	function expandWords() { let sels = editor.selections; let i = sels.length-1;
-	  while (i >=0) { let sel = sels[i];
-	    if (sel.isEmpty) {r = editor.document.getWordRangeAtPosition(sel.start); sels[i] = new vscode.Selection(r.start, r.end);}
-	    i--; }
-	  editor.selections = sels;
-	}
-	function doTransform(i) { let sels = editor.selections;
+	function doTransform(i) {
+	  let sels = editor.selections;
 	  if (i < 0 || i >= sels.length) { return; }
 	  let sel = sels[i];
 	  let word_matches = editor.document.getText(sel).matchAll(/([a-z]+|[A-Z][a-z]*|[^A-Za-z]+)/g);
 	  let words = [];
 	  for (const match of word_matches) {words.push(match[0].toLowerCase())};
-	  editor.edit(eb => {eb.replace(sel, words.join('_'))}).then(x => { doTransform(i+1); });
+	  editor.edit(eb => {eb.replace(sel, words.join('_'))}).then(x => {
+	    doTransform(i+1);
+	  });
 	}
 
 
@@ -33,20 +30,17 @@ description:
 	Same as transformToSnake, but vice versa
 javascript:
 	let editor = window.activeTextEditor;
-	expandWords();
+	speedy.expandAllSelectionsToWords();
 	doTransform(0);
-	function expandWords() { let sels = editor.selections; let i = sels.length-1;
-	  while (i >=0) { let sel = sels[i];
-	    if (sel.isEmpty) {r = editor.document.getWordRangeAtPosition(sel.start); sels[i] = new vscode.Selection(r.start, r.end);}
-	    i--; }
-	  editor.selections = sels;
-	}
-	function doTransform(i) { let sels = editor.selections;
+	function doTransform(i) {
+	  let sels = editor.selections;
 	  if (i < 0 || i >= sels.length) { return; }
 	  let sel = sels[i];
 	  let words = editor.document.getText(sel).split('_')
 	  let camel_words = words.map(function(w) {return w[0].toUpperCase() + w.slice(1,).toLowerCase()});
-	  editor.edit(eb => {eb.replace(sel, camel_words.join(''))}).then(x => { doTransform(i+1); });
+	  editor.edit(eb => {eb.replace(sel, camel_words.join(''))}).then(x => {
+	    doTransform(i+1);
+	  });
 	}
 
 
@@ -56,11 +50,13 @@ speedy:
 	verbose = true
 cmd:
     cursorHome
+vars:
+	standard
 javascript:
     const editor = window.activeTextEditor;
     const doc = window.activeTextEditor.document;
     let parts = doc.lineAt(window.activeTextEditor.selection.start).text.split('(');
-    let function_name = parts[0].replace('def ','').trim();
+	speedy.setVariable('function_name',parts[0].replace('def ','').trim());
     parts = parts[1].split(')');
     let args = parts[0].split(',');
     parts = parts[1].replace('->','').split(':');
@@ -78,14 +74,14 @@ javascript:
         arg_vals.push(val);
     });
     parts = (doc.isUntitled ? '' : doc.fileName).split('.')[0].split('\\\\')
-    let unit_name = parts.slice(parts.length-3).join('.');
-    let unit_test = '# TODO Move this to test_' + unit_name + '.py\\nfrom ..' + unit_name + ' import ' + function_name +'\\n';
-    unit_test += 'def test_' + function_name + '():\\n\\t';
-    if (arg_names.length >= 0) {
-        if (arg_names.length > 1){ unit_test += '(' + arg_names.join(',') + ')'; } else { unit_test += arg_names[0]; }
-        unit_test += ' = ';
-        if (arg_vals.length > 1){unit_test += '(' + arg_vals.join(',') + ')'; } else {unit_test += arg_vals[0]; }
-    }
-    unit_test += '\\n\\tassert ' + function_name + '(' + arg_names.join(',') + ') == ' + arg_vals[0] + '\\n\\n\\n';
-    let start_of_line = window.activeTextEditor.selection.start;
-    editor.edit(edit_builder => {edit_builder.insert(start_of_line, unit_test)})
+	speedy.setVariable('unit_name',parts.slice(parts.length-3).join('.'));
+	speedy.setVariable('arg_name_list',arg_names.join(','));
+	speedy.setVariable('arg_val_list',arg_vals.join(','));
+	speedy.setVariable('first_arg_val',arg_vals[0]);
+snip:
+# TODO Move this to test_$TM_FILENAME
+from ..${TM_FILENAME_BASE} import $function_name
+def test_$function_name():
+	( ${arg_name_list} ) = ( $arg_val_list )
+    assert $function_name($arg_name_list) == $first_arg_val
+

@@ -4,7 +4,8 @@ import { execSync } from 'child_process';
 
 // These two imports are here for the embedded javascript in the macros to reference
 const { window } = require("vscode");
-import path = require("path");
+const path = require("path");
+import { MacroWriterTools } from './tools';
 
 
 export enum ActionType {
@@ -83,7 +84,7 @@ export class MacroAction {
     applySpeedyOptions() {
         for (let step of this.steps) {
             let stepParts = step.split("=", 2);
-            this.parent.options.set(stepParts[0].trim(), stepParts[1].trim());
+            this.parent.options[stepParts[0].trim()] = stepParts[1].trim();
             if (this.parent.options.verbose) {
                 console.log(`Setting option ${stepParts[0].trim()} to ${stepParts[1].trim()}`);
             }
@@ -117,14 +118,16 @@ export class MacroAction {
         }
         let editor = vscode.window.activeTextEditor;
         if (editor) {
-            editor.insertSnippet(<vscode.SnippetString><unknown>(adjustedSnippet.join("\n")));
+            let ss = new vscode.SnippetString(adjustedSnippet.join("\n"));
+            editor.insertSnippet(ss);
         }
         return true;
     }
     runJsCodeInMacroEnvironment(code: string[]) {
         console.log(code.join("\n"));
+        let speedy = new MacroWriterTools(this.parent);
         try {
-            eval(code.join("\n")); // ( vscode );
+            eval(code.join("\n"));
             // return Function('return (' + code.join("\n") + ')')(); // ( vscode );
         }
         catch (e) {

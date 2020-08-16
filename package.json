@@ -29,11 +29,11 @@
 		"commands": [
 			{
 				"command": "speedy.run",
-				"title": "Speedy: Run A Macro"
+				"title": "Speedy: Run a macro."
 			},
 			{
-				"command": "speedy.dummy",
-				"title": "Speedy: Dummy Macro"
+				"command": "speedy.reload",
+				"title": "Speedy: Reload all of the macros."
 			}
 		]
 	},

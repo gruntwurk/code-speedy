@@ -1,3 +1,8 @@
+import * as vscode from 'vscode';
+
+const { window } = require("vscode");
+const path = require("path");
+
 import { escapeRegExp, onlyUnique } from './utils';
 
 const standardVariablesAction = [
@@ -46,35 +51,63 @@ export class VariableDefs {
      * nothing after that, then if there is an existing definiution for that
      * variable, it will be removed.
      */
-    addVariables(action: string[]) {
-        let cmdLineArg = action[0].split(":", 2)[1].trim();
-        if (cmdLineArg === "standard") {
-            this.addVariables(standardVariablesAction);
-        }
-        for (let varDef of action.slice(1)) {
-            let varExpresion = "";
+    addVariables(pairs: string[]) {
+        for (let varDef of pairs) {
+            if (varDef.trim() === "standard") {
+                this.addVariables(standardVariablesAction);
+                continue;
+            }
+            let varExpression = "";
             let parts = varDef.split("=", 2);
             let varName = parts[0].trim();
             if (varName.startsWith("$")) {
                 varName = varName.slice(1);
             }
             if (parts.length > 1) {
-                varExpresion = parts[1].trim();
+                varExpression = parts[1].trim();
             }
-            if (varExpresion) {
-                this.variableDict[varName] = varExpresion;
-            } else {
-                delete this.variableDict[varName];
-            }
+            this.setVariable(varName, varExpression);
         }
     };
-
+    setVariable(varName: string, varExpression: string) {
+        if (varExpression) {
+            this.variableDict[varName] = varExpression;
+        } else {
+            delete this.variableDict[varName];
+        }
+    }
+    setVariableExplicit(varName: string, value: string) {
+        if (value) {
+            let varExpression;
+            if (value.includes('"')) {
+                varExpression = `'${value}'`;
+            } else {
+                varExpression = `"${value}"`;
+            }
+            varExpression = varExpression.replace(/\\/g, "\\\\");
+            this.variableDict[varName] = varExpression;
+        } else {
+            delete this.variableDict[varName];
+        }
+    }
     /**
      * Executes the expression associated with the given variable name and returns the result.
      */
     evaluateVariable(varName: string): any {
-         //TODO does var exist?
-       return eval(this.variableDict[varName]);
+        //TODO does var exist?
+        console.log(`window: ${typeof window}`);
+        console.log(`vscode: ${typeof vscode}`);
+        console.log(`path: ${typeof path}`);
+
+        let expression = this.variableDict[varName];
+        let value = undefined;
+        try {
+            value = eval(expression);
+            console.log(`${varName}: ${expression} = ${value}`);
+        } catch (e) {
+            console.error(`ERROR in variable expression (${varName} = ${expression}): ${e.message}`);
+        }
+        return value;
     }
 
     /**
@@ -85,13 +118,13 @@ export class VariableDefs {
      * placeholder is replaced by the answer.
      */
     async applySubstitutions(text: string[]): Promise<string[]> {
-        let varsFound = this.findAllVariablePlaceholders(text);
-        console.log(`Found ${varsFound.length} variables: ${varsFound}`);
+        let placeholdersFound = this.findAllVariablePlaceholders(text);
+        console.log(`Found ${placeholdersFound.length} placeholders: ${placeholdersFound}`);
         let adjustedText: string[] = [];
         text.forEach(val => adjustedText.push(val));
-        if (varsFound) {
-            for (let varName of varsFound) {
-                let substitution = this.evaluateVariable(varName);
+        if (placeholdersFound) {
+            for (let placeholder of placeholdersFound) {
+                let substitution = this.evaluateVariable(placeholder.replace(/[${}]/g, ""));
                 if (substitution) {
                     if (substitution instanceof Promise) {
                         substitution = await substitution;
@@ -99,7 +132,7 @@ export class VariableDefs {
                     substitution = `${substitution}`;
                 }
                 let replacer = (line: string) => {
-                    return line.replace(RegExp(escapeRegExp(varName), "g"), substitution);
+                    return line.replace(RegExp(escapeRegExp(placeholder), "g"), substitution);
                 };
                 for (let i = 0; i < text.length; i++) {
                     adjustedText[i] = replacer(adjustedText[i]);

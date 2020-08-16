@@ -26,7 +26,7 @@ export function deactivate() { }
 
 function loadcommands() {
 
-	// create a command for running macros by name
+	// The command for running a macro by name
 	console.log(`Registering ${MACRO_PREFIX}run`);
 	vscode.commands.registerCommand(`${MACRO_PREFIX}run`, async () => {
 		let selection = await window.showQuickPick(macros.getNames());
@@ -35,11 +35,15 @@ function loadcommands() {
 		}
 	});
 
-	// create a dummy command that works out of the box
-	console.log(`Registering ${MACRO_PREFIX}dummy`);
-	vscode.commands.registerCommand(`${MACRO_PREFIX}dummy`, async () => {
-		window.showInformationMessage(`Congratulations you ran the dummy command`);
+	// The command for reloading all of the macros
+	console.log(`Registering ${MACRO_PREFIX}reload`);
+	vscode.commands.registerCommand(`${MACRO_PREFIX}reload`, async () => {
+		macros.unloadAll();
+		loadMacros();
 	});
+
+
+
 }
 
 
