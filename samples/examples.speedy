@@ -23,15 +23,9 @@ js:
 
 
 [openNewTerminal]
-command:
-	workbench.action.terminal.new
-command:
-	workbench.action.terminal.sendSequence
-	text = "echo hello\n"
-
-
-
-[printToNewTerminal]
+desc:
+	Opens a new terminal and sends a command to it.
+	(This is different than using the shellscript action, in that what's done in this macro is visible to the user.)
 cmd:
 	 workbench.action.terminal.new
 vars:
@@ -44,6 +38,8 @@ command:
 
 
 [userInputViaJavascript]
+Desc:
+	Demonstrates how VS Code works when you invoke showInputBox() and showInformationMessage().
 javascript:
 	let response = await window.showInputBox()
 	window.showInformationMessage(`You entered: ${response}`)
@@ -67,25 +63,21 @@ description:
 	Example of running a shell script in the background.
 	IMPORTANT: don't start a shell command here that doesn't finish!
 	There's no good way of killing/canceling it.
-	(Yes, the echo in step 2 will never be seen.)
-shell:
+	(Yes, the echo will never be seen.)
+vars:
+	$currentFolder = vscode.workspace.rootPath
+shell: cd \"$currentFolder\"
 	touch .gitignore
 	echo hello
 
 
 
-[anotherShellExample]
-vars:
-	$currentFolder = vscode.workspace.rootPath
-shell: cd \"$currentFolder\"
-	touch .gitignore
-
-
-
 [invokeSomeNamedSnippet]
+desc:
+	Demonstrates invoking a pre-defined snippet by its prefix.
 command:
 	type
-	text = "mySnippetPrefixHere"
+	"mySnippetPrefixHere"
 command:
 	insertSnippet
 

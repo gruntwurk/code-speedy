@@ -1,0 +1,42 @@
+[pytestForFunction]
+speedy:
+	verbose = true
+desc:
+	Given a Python function signature, creates a corresponding unit test (pytest flavor).
+	Assumes that the line under the cursor is the signature in question.
+	(e.g. "def solve_puzzle(name: str, puzzle_type: str = 'suduko') -> str:")
+cmd:
+    cursorHome
+vars:
+	standard
+javascript:
+    const editor = window.activeTextEditor;
+    const doc = window.activeTextEditor.document;
+    let parts = "$TM_CURRENT_LINE".text.split('(');
+	speedy.setVariable('function_name',parts[0].replace('def ','').trim());
+    parts = parts[1].split(')');
+    let args = parts[0].split(',');
+    parts = parts[1].replace('->','').split(':');
+    let hint = parts[0];
+    let arg_names = [];
+    let arg_vals = [];
+    args.forEach(function(arg){
+        let parts = arg.split('=');
+        let val = (parts.length >= 2) ? parts[1].trim() : '';
+        parts = parts[0].split(':');
+        let arg_name = parts[0].trim();
+        let hint = (parts.length >= 2) ? parts[1].trim() : '';
+        if (val == ''){val = (hint == 'int') ? '123' : '\"abc\"'};
+        arg_names.push(arg_name);
+        arg_vals.push(val);
+    });
+	speedy.setVariable('arg_name_list',arg_names.join(','));
+	speedy.setVariable('arg_val_list',arg_vals.join(','));
+	speedy.setVariable('first_arg_val',arg_vals[0]);
+snip:
+# TODO Move this to test_$TM_FILENAME
+from ..${TM_FILENAME_BASE} import $function_name
+def test_$function_name():
+	( ${arg_name_list} ) = ( $arg_val_list )
+    assert $function_name($arg_name_list) == $first_arg_val
+

@@ -13,7 +13,7 @@ export class MacroWriterTools {
 
     /**
      * This tool will check each selection (if multi-select, or just the one if not).
-     * If a selction is empty (just a cursor, i.e. start == end),
+     * If a selection is empty (just a cursor, i.e. start == end),
      * then that selection is expanded to the word under the cursor.
      */
     expandAllSelectionsToWords() {
@@ -28,6 +28,10 @@ export class MacroWriterTools {
         }
         editor.selections = sels;
     }
+
+    /**
+     * Equivalent of declaring `name = value` in a `vars:` action, but programmaticly via your custom JavaScript.
+     */
     setVariable(varName: string, value: string) {
         this.parent.varDefs.setVariableExplicit(varName, value);
     }

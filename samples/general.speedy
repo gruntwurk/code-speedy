@@ -1,0 +1,53 @@
+[unMultiSelectLast]
+description:
+	For when you Ctrl-Click to multiselect 10 times and on the eleventh get it wrong.
+	Just press Ctrl-0 (or whatever key you assign) to unselect the eleventh, then carry on.
+	(See also, https://github.com/danseethaler/vscode-tab-through-selections, for more along this line.)
+javascript:
+	const editor = window.activeTextEditor;
+	const newSelections = editor.selections.slice(0, editor.selections.length - 1);
+	editor.selections = newSelections;
+
+
+[transformToSnake]
+description:
+	A multi-select friendly macro to convert from CamelCase to snake_case.
+	If any particular selection is empty (just a cursor), this will automatically expand it to the whole word first.
+	(Kudos to https://stackoverflow.com/users/398630/brainslugs83 for some pointers)
+javascript:
+	let editor = window.activeTextEditor;
+	speedy.expandAllSelectionsToWords();
+	doTransform(0);
+	function doTransform(i) {
+	  let sels = editor.selections;
+	  if (i < 0 || i >= sels.length) { return; }
+	  let sel = sels[i];
+	  let word_matches = editor.document.getText(sel).matchAll(/([a-z]+|[A-Z][a-z]*|[^A-Za-z]+)/g);
+	  let words = [];
+	  for (const match of word_matches) {words.push(match[0].toLowerCase())};
+	  editor.edit(eb => {eb.replace(sel, words.join('_'))}).then(x => {
+	    doTransform(i+1);
+	  });
+	}
+
+
+
+[transformToCamel]
+description:
+	Same as transformToSnake, but vice versa.
+javascript:
+	let editor = window.activeTextEditor;
+	speedy.expandAllSelectionsToWords();
+	doTransform(0);
+	function doTransform(i) {
+	  let sels = editor.selections;
+	  if (i < 0 || i >= sels.length) { return; }
+	  let sel = sels[i];
+	  let words = editor.document.getText(sel).split('_')
+	  let camel_words = words.map(function(w) {return w[0].toUpperCase() + w.slice(1,).toLowerCase()});
+	  editor.edit(eb => {eb.replace(sel, camel_words.join(''))}).then(x => {
+	    doTransform(i+1);
+	  });
+	}
+
+
