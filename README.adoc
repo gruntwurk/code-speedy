@@ -248,7 +248,12 @@ Python-specific macros.
 
 * *pytestForFunction* -- 
 Given a Python function signature, creates a corresponding unit test (pytest flavor).
-Assumes that the line under the cursor is the signature in question.
+(Assumes that the line under the cursor is the signature in question.)
+
+* *callForFunction* --
+Similarly, given a Python function signature, creates a corresponding call.
+Knows that if the first argument is self, then make it a method call.
+
 
 === examples.speedy
 

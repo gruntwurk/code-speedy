@@ -12,24 +12,28 @@ vars:
 javascript:
     const editor = window.activeTextEditor;
     const doc = window.activeTextEditor.document;
-    let parts = "$TM_CURRENT_LINE".text.split('(');
-	speedy.setVariable('function_name',parts[0].replace('def ','').trim());
-    parts = parts[1].split(')');
-    let args = parts[0].split(',');
-    parts = parts[1].replace('->','').split(':');
-    let hint = parts[0];
+    let parts = doc.lineAt(window.activeTextEditor.selection.start).text.split('(',2);
+	let function_name = parts[0].replace('def ','').trim();
+    let args = parts[1].split(')',2)[0].split(',');
     let arg_names = [];
     let arg_vals = [];
+    let is_class_member = false;
     args.forEach(function(arg){
-        let parts = arg.split('=');
+        let parts = arg.split('=',2);
+        // FIXME For some strange reason, if the val is enclosed in single-quotes, then it comes back undefined, but if it's in double-quotes, it's fine.
         let val = (parts.length >= 2) ? parts[1].trim() : '';
-        parts = parts[0].split(':');
+        parts = parts[0].split(':',2);
         let arg_name = parts[0].trim();
-        let hint = (parts.length >= 2) ? parts[1].trim() : '';
-        if (val == ''){val = (hint == 'int') ? '123' : '\"abc\"'};
-        arg_names.push(arg_name);
-        arg_vals.push(val);
+        if (arg_name == 'self') {
+            is_class_member = true;
+        } else {
+            let hint = (parts.length >= 2) ? parts[1].trim() : '';
+            if (val == ''){val = (hint == 'int') ? '123' : '"abc"'};
+            arg_names.push(arg_name);
+            arg_vals.push(val);
+        }
     });
+    speedy.setVariable('function_name',function_name);
 	speedy.setVariable('arg_name_list',arg_names.join(','));
 	speedy.setVariable('arg_val_list',arg_vals.join(','));
 	speedy.setVariable('first_arg_val',arg_vals[0]);
@@ -39,4 +43,36 @@ from ..${TM_FILENAME_BASE} import $function_name
 def test_$function_name():
 	( ${arg_name_list} ) = ( $arg_val_list )
     assert $function_name($arg_name_list) == $first_arg_val
+
+[callForFunction]
+speedy:
+    verbose = true
+desc:
+    Given a Python function signature, creates a corresponding call.
+    Assumes that the line under the cursor is the signature in question.
+    (e.g. "def solve_puzzle(name: str, puzzle_type: str = 'suduko') -> str:")
+cmd:
+    cursorHome
+vars:
+    standard
+javascript:
+    const editor = window.activeTextEditor;
+    const doc = window.activeTextEditor.document;
+    let parts = doc.lineAt(window.activeTextEditor.selection.start).text.split('(',2);
+    let function_name = parts[0].replace('def ','').trim();
+    let args = parts[1].split(')',2)[0].split(',');
+    let arg_names = [];
+    let is_class_member = false;
+    args.forEach(function(arg){
+        let arg_name = arg.split('=',2)[0].split(':',2)[0].trim();
+        if (arg_name == 'self') {
+            is_class_member = true;
+        } else {
+            arg_names.push(arg_name);
+        }
+    });
+    speedy.setVariable('function_name',(is_class_member ? 'self.' : '') + function_name);
+    speedy.setVariable('arg_name_list',arg_names.join(','));
+snip:
+    $function_name($arg_name_list)
 
