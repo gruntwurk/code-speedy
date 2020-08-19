@@ -41,7 +41,7 @@ There are several action types:
 * *snippet* -- Inserts an arbitrary snippet, that is, where you define the snippet template right there as the action's steps.
 (If you want to invoke an existing snippet by its prefix, there's a command for that.)
 * *variables* -- Defines a set of variables using JavaScript expressions for the duration of the macro.
-The calculated values are then inserted into named placeholders in any of the other action steps (command arguments, javascript code, shell script code, snippet template text).
+The calculated values are then inserted into named placeholders in most of the other action steps (command arguments, shell script code, snippet template text).
 * *description* -- Does nothing, currently. It's just a convenient way to document what the macro does.
 * *speedy* -- Sets various directives (e.g. `verbose = true`, `context = python`) for the duration of the macro.
 (`context` is not implemented yet.)
@@ -62,7 +62,7 @@ First, install the code-speedy extension.
 *Method 2:* Downloaded the `.vsix` file that corresponds to the build you wish to use, then:
 `code --install-extension code-speedy-0.0.1.vsix`
 
-Next, open your VS Code settings.json and create a new `code-speedy` section...
+Next, open your VS Code settings.json and create a new `speedy` section...
 
 . Click on the gear-icon (lower left).
 . Select "`Settings.`"
@@ -74,10 +74,10 @@ Next, open your VS Code settings.json and create a new `code-speedy` section...
 ----
 "speedy.macros": {
     "files": [
-    	"/work/universal-macros.speedy",
-    	"~personal-macros.speedy",
-    	"project-macros.speedy",
-    	"../project-group-macros.speedy"
+        "/work/universal-macros.speedy",
+        "~personal-macros.speedy",
+        "project-macros.speedy",
+        "../project-group-macros.speedy"
     ]
 }
 ----
@@ -123,34 +123,34 @@ Speaking of which, for all other action types, speedy will skip blank lines and 
 ----
 [pytestForFunction]
 speedy:
-	// These comments are ignored
-	// Note: currently, if you set verbose = false, that will set it to "false" a non-empty string.
-	// So, just delete this line altogether.
-	verbose = true
+    // These comments are ignored
+    // Note: currently, if you set verbose = false, that will set it to "false" a non-empty string.
+    // So, just delete this line altogether.
+    verbose = true
 desc:
-	Given a Python function signature, creates a corresponding unit test (pytest flavor).
-	Assumes that the line under the cursor is the signature in question.
-	(e.g. "def solve_puzzle(name: str, puzzle_type: str = 'suduko') -> str:")
+    Given a Python function signature, creates a corresponding unit test (pytest flavor).
+    Assumes that the line under the cursor is the signature in question.
+    (e.g. "def solve_puzzle(name: str, puzzle_type: str = 'suduko') -> str:")
 cmd:
     cursorHome
 vars:
-	author = (group effort)
-	// "standard" (with no =) brings in twenty+ standard definitions (e.g. TODAY, WORKSPACE_NAME, TM_DIRECTORY)
-	standard
+    author = (group effort)
+    // "standard" (with no =) brings in twenty+ standard definitions (e.g. TODAY, WORKSPACE_NAME, TM_DIRECTORY)
+    standard
 javascript:
-	// This comment and the blank line that follows are ignored
+    // This comment and the blank line that follows are ignored
 
     const editor = window.activeTextEditor;         // this comment is part of the javascript (not ignored by
     const doc = editor.document;   // speedy, but then ignore by the JS interpreter)
     let sigLine = doc.lineAt(window.activeTextEditor.selection.start.line).text;
-	// speedy is a special object that you can reference in your JS (along with vscode, window, and path)
+    // speedy is a special object that you can reference in your JS (along with vscode, window, and path)
     let functionParts = speedy.parsePythonSignature(sigLine);
     let codeFilename = path.parse(speedy.getFilePath()).base;
     let codeModuleName = path.parse(speedy.getFilePath()).name;
-	speedy.setLiteral('code_filename',codeFilename);
-	speedy.setLiteral('code_module_name',codeModuleName);
-	speedy.setLiteral('function_name',functionParts.functionName);
-	speedy.setLiteral('arg_name_list',functionParts.argumentNames.join(','));
+    speedy.setLiteral('code_filename',codeFilename);
+    speedy.setLiteral('code_module_name',codeModuleName);
+    speedy.setLiteral('function_name',functionParts.functionName);
+    speedy.setLiteral('arg_name_list',functionParts.argumentNames.join(','));
     let argTypes = functionParts.argumentTypes;
     let argDefaults = functionParts.argumentDefaults;
     for (let i = 0; i < argTypes.length; i++) {
@@ -158,8 +158,8 @@ javascript:
             argDefaults[i] = (argTypes[i] == "int") ? "123" : '"abc"';
         }
     }
-	speedy.setLiteral('arg_val_list',argDefaults.join(','));
-	speedy.setLiteral('first_arg_val',argDefaults[0]);
+    speedy.setLiteral('arg_val_list',argDefaults.join(','));
+    speedy.setLiteral('first_arg_val',argDefaults[0]);
     let fullUnitTestFilename = `${path.parse(speedy.getFilePath()).dir}/../tests/test_${codeFilename}`;
     speedy.editFileToAppend(fullUnitTestFilename);
 snip:
@@ -167,7 +167,7 @@ snip:
 from ..${code_module_name} import $function_name
 
 def test_$function_name():
-	( ${arg_name_list} ) = ( $arg_val_list )
+    ( ${arg_name_list} ) = ( $arg_val_list )
     assert $function_name($arg_name_list) == $first_arg_val
 ----
 
@@ -186,7 +186,7 @@ The following action type declarations are recognized:
 For a command, the name of the command goes on the next line (the first "step").
 Any arguments go on the following lines (steps 2, 3, ...).
 
-For JavaSript, a shell script, or a snippet, the code or template text begins with the next line (steps 1 thru N).
+For JavaScript, a shell script, or a snippet, the code or template text begins with the next line (steps 1 thru N).
 
 For variables, either put the word "standard" on a line by itself, and/or list your own variable definition(s).
 A variable definition consists of a name, followed by an equal sign (=), followed by a JavaScript expression.
@@ -206,10 +206,27 @@ Your JavaScript (in both the javascript action and the variable definitions) has
 
 == The `speedy` (Tools) Object
 
-* *expandAllSelectionsToWords* --
-This tool will check each selection (if multi-select, or just the one if not).
-If a selection is empty (just a cursor, i.e. start == end),
-then that selection is expanded to the word under the cursor.
+The `speedy` object provides certain tools that you might find useful in your custom JavaScript.
+
+* *executeCommand(command)* --
+Same as `vscode.commands.executeCommand(command)` -- except that this
+uses a mutex lock to make sure the command finishes executing before
+your javascript resumes.
+
+* *getFilePath()* --
+Just a shortcut for: `window.activeTextEditor.document.uri.fsPath`
+TIP: use path.parse to break it up:
+** `let fp = speedy.getFilePath();`
+** `path.parse(fp).root`
+** `path.parse(fp).dir` (includes root)
+** `path.parse(fp).name`
+** `path.parse(fp).ext` (includes dot)
+** `path.parse(fp).base` (name + .ext)
+
+* *editFileToAppend(filepath)* --
+Opens the named file in a new editor window and positions the cursor at the bottom.
+For example, open a corresponding unit-test script in order to add a new test case at the end.
+If the file does not already exist, it will be created.
 
 * *setVariable(name, expression)* --
 Equivalent of declaring `name = expression` in a `vars:` action, but programmaticly via your custom JavaScript.
@@ -218,36 +235,22 @@ Equivalent of declaring `name = expression` in a `vars:` action, but programmati
 Sets a variable to an exact string value (not an expression).
 Equivalent of declaring `name = "string literal"` in a `vars:` action.
 
-* *getFilePath()* --
-Just a shortcut for: `window.activeTextEditor.document.uri.fsPath`
-TIP: use path.parse to break it up:
-    let fp = speedy.getFilePath();
-    path.parse(fp).root
-    path.parse(fp).dir (includes root)
-    path.parse(fp).name
-    path.parse(fp).ext (includes dot)
-    path.parse(fp).base (name + .ext)
-
-* *executeCommand(command)* --
-Same as `vscode.commands.executeCommand(command)` -- except that this
-uses a mutex lock to make sure the command finishes executing before
-your javascript resumes.
-
-* *editFileToAppend(filepath)* --
-Opens the named file in a new editor window and positions the cursor at the bottom.
-For example, open a corresponding unit-test script in order to add a new test case at the end.
-If the file does not already exist, it will be created.
+* *expandAllSelectionsToWords()* --
+This tool will check each selection (if multi-select, or just the one if not).
+If a selection is empty (just a cursor, i.e. start == end),
+then that selection is expanded to the word under the cursor.
 
 * *parsePythonSignature(pythonCodeLine)* --
 (Used by the `python.speedy` sample.)
 Parses the Python function signature that's under the cursor (anywhere on the line).
 Returns an object with the following attributes:
-functionName: the function name,
-argumentCount: the number of argument definitions
-argumentNames: a list of the argument names, in order
-argumentTypes: a list of the argument types (hints), in order
-argumentDefaults: a list of the argument defaults, in order
-isClassMember: if the first argument is "self", then this flag is set and that argument is skipped.
+** functionName: the function name,
+** argumentCount: the number of argument definitions
+** argumentNames: a list of the argument names, in order
+** argumentTypes: a list of the argument types (hints), in order
+** argumentDefaults: a list of the argument defaults, in order
+** isClassMember: if the first argument is "self", then this flag is set and that argument is skipped.
+
 If an argument has no type hint, then it will be an empty string.
 Likewise, if no default value.
 
