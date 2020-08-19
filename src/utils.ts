@@ -1,3 +1,19 @@
+var verbose: boolean = false;
+
+export function logVerbose(setting: boolean) {
+    verbose = setting;
+}
+
+export function logInfo(msg: string) {
+    if (verbose) {
+        console.log(msg);
+    }
+}
+
+export function logError(msg: string) {
+    console.error(msg);
+}
+
 /**
  * Escapes all of the special regex symbols with a backslash.
  */
@@ -39,4 +55,13 @@ export function isListOfStrings(obj: any): boolean {
 
 export function cloneArray(originalArray: any[]): any[] {
     return Object.assign([], originalArray);
+}
+
+export function enquote(value:string) {
+    value = value.replace("\\","\\\\");
+    if (value.includes('"')) {
+        value = value.replace("'","\\'");
+        return `'${value}'`;
+    }
+    return `"${value}"`;
 }

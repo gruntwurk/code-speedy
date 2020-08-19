@@ -10,39 +10,37 @@ cmd:
 vars:
 	standard
 javascript:
-    const editor = window.activeTextEditor;
-    const doc = window.activeTextEditor.document;
-    let parts = doc.lineAt(window.activeTextEditor.selection.start).text.split('(',2);
-	let function_name = parts[0].replace('def ','').trim();
-    let args = parts[1].split(')',2)[0].split(',');
-    let arg_names = [];
-    let arg_vals = [];
-    let is_class_member = false;
-    args.forEach(function(arg){
-        let parts = arg.split('=',2);
-        // FIXME For some strange reason, if the val is enclosed in single-quotes, then it comes back undefined, but if it's in double-quotes, it's fine.
-        let val = (parts.length >= 2) ? parts[1].trim() : '';
-        parts = parts[0].split(':',2);
-        let arg_name = parts[0].trim();
-        if (arg_name == 'self') {
-            is_class_member = true;
-        } else {
-            let hint = (parts.length >= 2) ? parts[1].trim() : '';
-            if (val == ''){val = (hint == 'int') ? '123' : '"abc"'};
-            arg_names.push(arg_name);
-            arg_vals.push(val);
+    let editor = window.activeTextEditor;
+    let sigLine = editor.document.lineAt(window.activeTextEditor.selection.start.line).text;
+    let functionParts = speedy.parsePythonSignature(sigLine);
+    let codeFilename = path.parse(speedy.getFilePath()).base;
+    let codeModuleName = path.parse(speedy.getFilePath()).name;
+	speedy.setLiteral('code_filename',codeFilename);
+	speedy.setLiteral('code_module_name',codeModuleName);
+	speedy.setLiteral('function_name',functionParts.functionName);
+	speedy.setLiteral('arg_name_list',functionParts.argumentNames.join(','));
+    let argTypes = functionParts.argumentTypes;
+    let argDefaults = functionParts.argumentDefaults;
+    for (let i = 0; i < argTypes.length; i++) {
+        if (argDefaults[i] == "") {
+            argDefaults[i] = (argTypes[i] == "int") ? "123" : '"abc"';
         }
-    });
-    speedy.setVariable('function_name',function_name);
-	speedy.setVariable('arg_name_list',arg_names.join(','));
-	speedy.setVariable('arg_val_list',arg_vals.join(','));
-	speedy.setVariable('first_arg_val',arg_vals[0]);
+    }
+	speedy.setLiteral('arg_val_list',argDefaults.join(','));
+	speedy.setLiteral('first_arg_val',argDefaults[0]);
+    let fullUnitTestFilename = `${path.parse(speedy.getFilePath()).dir}/../tests/test_${codeFilename}`;
+    speedy.editFileToAppend(fullUnitTestFilename);
 snip:
-# TODO Move this to test_$TM_FILENAME
-from ..${TM_FILENAME_BASE} import $function_name
+
+from ..${code_module_name} import $function_name
+
 def test_$function_name():
 	( ${arg_name_list} ) = ( $arg_val_list )
     assert $function_name($arg_name_list) == $first_arg_val
+speedy:
+    // Sticking another speedy: here simply forces the snippet to end (without the following blank lines)
+
+
 
 [callForFunction]
 speedy:
@@ -56,23 +54,15 @@ cmd:
 vars:
     standard
 javascript:
+    speedy.executeCommand('cursorHome');
     const editor = window.activeTextEditor;
-    const doc = window.activeTextEditor.document;
-    let parts = doc.lineAt(window.activeTextEditor.selection.start).text.split('(',2);
-    let function_name = parts[0].replace('def ','').trim();
-    let args = parts[1].split(')',2)[0].split(',');
-    let arg_names = [];
-    let is_class_member = false;
-    args.forEach(function(arg){
-        let arg_name = arg.split('=',2)[0].split(':',2)[0].trim();
-        if (arg_name == 'self') {
-            is_class_member = true;
-        } else {
-            arg_names.push(arg_name);
-        }
-    });
-    speedy.setVariable('function_name',(is_class_member ? 'self.' : '') + function_name);
-    speedy.setVariable('arg_name_list',arg_names.join(','));
+    const doc = editor.document;
+    let sigLine = doc.lineAt(editor.selection.start).text;
+    let functionParts = speedy.parsePythonSignature(sigLine);
+    speedy.setLiteral('function_name',(functionParts.isClassMember ? 'self.' : '') + functionParts.functionName);
+    speedy.setLiteral('arg_name_list',functionParts.argumentNames.join(','));
 snip:
     $function_name($arg_name_list)
+speedy:
+    // Sticking another speedy: here simply forces the snippet to end (without the following blank lines)
 

@@ -2,6 +2,8 @@ import { readFileSync }  from 'fs';
 import * as vscode from 'vscode';
 import { VariableDefs } from './variables';
 import { ActionType, MacroAction } from './actions';
+import { Mutex } from './mutex';
+import { logError, logInfo } from './utils';
 
 const MACRO_PREFIX = "speedy.";
 const MACRO_NAME_PATTERN = /^\[(\w+)\]\s*/;
@@ -22,6 +24,7 @@ export class MacroDef {
     varDefs = new VariableDefs();
     registered: boolean = false;
     options: OptionsDict = {"verbose": false};
+    runnerMutex = new Mutex();
 
     constructor(parent: SpeedyMacros, name: string) {
         this.parent = parent;
@@ -29,18 +32,18 @@ export class MacroDef {
     }
     register() {
         if (!this.registered) {
-            console.log(`Registering ${MACRO_PREFIX}${this.name}`);
+            logInfo(`Registering ${MACRO_PREFIX}${this.name}`);
             this.disposable = vscode.commands.registerTextEditorCommand(`${MACRO_PREFIX}${this.name}`, () => this.execute());
             this.parent.context?.subscriptions.push(this.disposable);
             this.registered = true;
         }
     }
     unload() {
-        console.log(`Unloading ${this.name}`);
+        logInfo(`Unloading ${this.name}`);
         if (this.disposable) {
             this.disposable.dispose;
         } else {
-            console.error(`Can't unload ${this.name} -- no disposable.`);
+            logError(`Can't unload ${this.name} -- no disposable.`);
         }
         this.registered = false;
     }
@@ -64,7 +67,7 @@ export class SpeedyMacros  {
     }
 
     readSpeedyFile(filename: string): string[] {
-        console.log(`Loading macros from ${filename}`);
+        logInfo(`Loading macros from ${filename}`);
         //TODO does file exist?
         let text = readFileSync(filename, 'utf8');
         return this.parseMacroDefinitions(text);
@@ -76,12 +79,12 @@ export class SpeedyMacros  {
     newOrUsedMacroDef(macroName: string): MacroDef {
         let mdef = this.macroDefs[macroName];
         if (mdef) {
-            console.log(`Reloading ${mdef.name} macro.`);
+            logInfo(`Reloading ${mdef.name} macro.`);
             mdef.actions = [];
         } else {
             mdef = new MacroDef(this, macroName);
             this.macroDefs[mdef.name] = mdef;
-            console.log(`Loading ${mdef.name} macro.`);
+            logInfo(`Loading ${mdef.name} macro.`);
         }
         return mdef;
     }
@@ -92,7 +95,7 @@ export class SpeedyMacros  {
         let currentAction: MacroAction | undefined = undefined;
         let actionNumber = 0;
         let textLines = text.split("\n");
-        console.log(`Loading ${textLines.length} lines worth of macros.`);
+        logInfo(`Loading ${textLines.length} lines worth of macros.`);
         for (let line of textLines) {
             // We need to preserve the formatting of snippet steps.
             // For everything else, we can drop blank lines and comments
@@ -107,6 +110,7 @@ export class SpeedyMacros  {
             let m = line.match(MACRO_NAME_PATTERN);
             if (m) {
                 currentMacro = this.newOrUsedMacroDef(m[1]);
+                actionNumber = 0;
                 currentAction = undefined;
                 continue;
             }

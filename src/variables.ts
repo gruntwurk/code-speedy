@@ -3,14 +3,13 @@ import * as vscode from 'vscode';
 const { window } = require("vscode");
 const path = require("path");
 
-import { escapeRegExp, onlyUnique } from './utils';
+import { escapeRegExp, onlyUnique, logError, logInfo } from './utils';
 
-const standardVariablesAction = [
-    "vars:",
+const standardVariables = [
     "CLIPBOARD = vscode.env.clipboard.readText()",
     "CURRENT_FILE_DIR = path.dirname(window.activeTextEditor.document.uri.fsPath)",
     "CURSOR_CHAR_NUMBER = window.activeTextEditor.selection.start.character",
-    "DOC_CURRENT_LINE = doc.lineAt(window.activeTextEditor.selection.start)",
+    "DOC_CURRENT_LINE = doc.lineAt(window.activeTextEditor.selection.start).text",
     "DOC_ENTIRE_TEXT = doc.getText()",
     "EOL_STYLE = (doc.eol == 1 ? 'LF' : 'CRLF')",
     "LINE_COUNT = window.activeTextEditor.document.lineCount",
@@ -22,13 +21,13 @@ const standardVariablesAction = [
     "TM_CURRENT_LINE = window.activeTextEditor.document.lineAt(window.activeTextEditor.selection.start)",
     "TM_CURRENT_WORD = window.activeTextEditor.document.getText(window.activeTextEditor.document.getWordRangeAtPosition(window.activeTextEditor.selection.start))",
     "TM_DIRECTORY = vscode.workspace.rootPath",
-    "TM_FILENAME = path.basename(window.activeTextEditor.document.uri.fsPath)",
-    "TM_FILENAME_BASE = path.basename(window.activeTextEditor.document.uri.fsPath).replace(/\\.[^/.]+$/, '')",
+    "TM_FILENAME = path.parse(window.activeTextEditor.document.uri.fsPath).base",
+    "TM_FILENAME_BASE = path.parse(window.activeTextEditor.document.uri.fsPath).name",
     "TM_FILEPATH = window.activeTextEditor.document.uri.fsPath",
     "TM_LINE_INDEX = window.activeTextEditor.selection.start.line",
     "TM_LINE_NUMBER = window.activeTextEditor.selection.start.line + 1",
     "TM_SELECTED_TEXT = window.activeTextEditor.document.getText(window.activeTextEditor.selection)",
-    "TODAY = new Date().toDateString();",
+    "TODAY = new Date().toDateString()",
     "WORKSPACE_NAME = vscode.workspace.name"
 ];
 
@@ -54,7 +53,7 @@ export class VariableDefs {
     addVariables(pairs: string[]) {
         for (let varDef of pairs) {
             if (varDef.trim() === "standard") {
-                this.addVariables(standardVariablesAction);
+                this.addVariables(standardVariables);
                 continue;
             }
             let varExpression = "";
@@ -69,43 +68,24 @@ export class VariableDefs {
             this.setVariable(varName, varExpression);
         }
     };
+
     setVariable(varName: string, varExpression: string) {
-        if (varExpression) {
-            this.variableDict[varName] = varExpression;
-        } else {
-            delete this.variableDict[varName];
-        }
+        this.variableDict[varName] = varExpression;
     }
-    setVariableExplicit(varName: string, value: string) {
-        if (value) {
-            let varExpression;
-            if (value.includes('"')) {
-                varExpression = `'${value}'`;
-            } else {
-                varExpression = `"${value}"`;
-            }
-            varExpression = varExpression.replace(/\\/g, "\\\\");
-            this.variableDict[varName] = varExpression;
-        } else {
-            delete this.variableDict[varName];
-        }
-    }
+
+
     /**
      * Executes the expression associated with the given variable name and returns the result.
      */
     evaluateVariable(varName: string): any {
         //TODO does var exist?
-        console.log(`window: ${typeof window}`);
-        console.log(`vscode: ${typeof vscode}`);
-        console.log(`path: ${typeof path}`);
-
         let expression = this.variableDict[varName];
         let value = undefined;
         try {
             value = eval(expression);
-            console.log(`${varName}: ${expression} = ${value}`);
+            logInfo(`${varName}: ${expression} = ${value}`);
         } catch (e) {
-            console.error(`ERROR in variable expression (${varName} = ${expression}): ${e.message}`);
+            logError(`ERROR in variable expression (${varName} = ${expression}): ${e.message}`);
         }
         return value;
     }
@@ -119,7 +99,7 @@ export class VariableDefs {
      */
     async applySubstitutions(text: string[]): Promise<string[]> {
         let placeholdersFound = this.findAllVariablePlaceholders(text);
-        console.log(`Found ${placeholdersFound.length} placeholders: ${placeholdersFound}`);
+        logInfo(`Found ${placeholdersFound.length} placeholders: ${placeholdersFound}`);
         let adjustedText: string[] = [];
         text.forEach(val => adjustedText.push(val));
         if (placeholdersFound) {

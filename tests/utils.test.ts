@@ -1,4 +1,4 @@
-import { cloneArray, escapeRegExp, isListOfStrings, onlyUnique } from '../src/utils';
+import { cloneArray, escapeRegExp, isListOfStrings, onlyUnique, enquote } from '../src/utils';
 
 describe('cloneArray', () => {
     it('produces a distinct copy of the array, not just another reference to the same array', () => {
@@ -41,6 +41,20 @@ describe("isListOfStrings", () => {
     it('Returns true if obj is an (un-nested) list of strings; otherwise false.', () => {
         expect(isListOfStrings(['abc','def'])).toBeTruthy();
         expect(isListOfStrings(['abc',3.1415])).not.toBeTruthy();
+    });
+});
+
+
+
+
+describe("enquote", () => {
+    it('wporks', () => {
+        expect(enquote('abc')).toBe('"abc"');
+        expect(enquote('"abc"')).toBe("'\"abc\"'");
+        expect(enquote("'abc'")).toBe('"\'abc\'"');
+        expect(enquote("abc'def")).toBe('"abc\'def"');
+        expect(enquote('"abc\'def"')).toBe("'\"abc\\'def\"'");
+        expect(enquote('abc\\n')).toBe('"abc\\\\n"');
     });
 });
 

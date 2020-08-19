@@ -3,6 +3,7 @@ import * as vscode from 'vscode';
 
 import { window } from "vscode";
 import { SpeedyMacros } from './macros';
+import { logError, logInfo } from './utils';
 
 const MACRO_PREFIX = "speedy.";
 
@@ -27,7 +28,7 @@ export function deactivate() { }
 function loadcommands() {
 
 	// The command for running a macro by name
-	console.log(`Registering ${MACRO_PREFIX}run`);
+	logInfo(`Registering ${MACRO_PREFIX}run`);
 	vscode.commands.registerCommand(`${MACRO_PREFIX}run`, async () => {
 		let selection = await window.showQuickPick(macros.getNames());
 		if (selection) {
@@ -36,7 +37,7 @@ function loadcommands() {
 	});
 
 	// The command for reloading all of the macros
-	console.log(`Registering ${MACRO_PREFIX}reload`);
+	logInfo(`Registering ${MACRO_PREFIX}reload`);
 	vscode.commands.registerCommand(`${MACRO_PREFIX}reload`, async () => {
 		macros.unloadAll();
 		loadMacros();
@@ -49,15 +50,15 @@ function loadcommands() {
 
 function loadMacros() {
 	speedyConfig = vscode.workspace.getConfiguration(`${MACRO_PREFIX}macros`);
-	console.log(`Config = ${speedyConfig}`);
+	logInfo(`Config = ${speedyConfig}`);
 	let fileList: string[] = [];
 	if (speedyConfig.has("file")) {
-		console.log(`file = ${speedyConfig.file}`);
+		logInfo(`file = ${speedyConfig.file}`);
 		fileList.push(speedyConfig.file);
 	}
 	if (speedyConfig.has("files")) {
 		for (let file of speedyConfig.files) {
-			console.log(`file = ${file}`);
+			logInfo(`file = ${file}`);
 			fileList.push(file);
 		}
 	}
@@ -65,7 +66,7 @@ function loadMacros() {
 	for (let filename of fileList) {
 		let issues = macros.readSpeedyFile(filename);
 		for (let issue of issues) {
-			console.error(issue);
+			logError(issue);
 		}
 		macros.registerAll();
 	}
