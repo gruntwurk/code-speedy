@@ -73,6 +73,16 @@ export class VariableDefs {
         this.variableDict[varName] = varExpression;
     }
 
+    unsetVariable(varName: string) {
+        delete this.variableDict[varName];
+    }
+
+    variableExists(varName: string): boolean {
+        if (this.variableDict[varName]) {
+            return true;
+        }
+        return false;
+    }
 
     /**
      * Executes the expression associated with the given variable name and returns the result.

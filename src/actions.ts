@@ -122,7 +122,27 @@ export class MacroAction {
     }
 
     async runSnippet() {
-        let adjustedSnippet = await this.parent.varDefs.applySubstitutions(this.steps);
+        let first = 0;
+        if (this.steps[0].startsWith("IFDEF ")) {
+            let varname = this.steps[0].slice(6).trim();
+            let exists = this.parent.varDefs.variableExists(varname);
+            logInfo(`${this.steps[0]} ${exists ? 'exists' : 'does no exist'}`);
+            if (!exists) {
+                logInfo(`skipping`);
+                return;
+            }
+            first = 1;
+        } else if (this.steps[0].startsWith("IFNDEF ")) {
+            let varname = this.steps[0].slice(7).trim();
+            let exists = this.parent.varDefs.variableExists(varname);
+            logInfo(`${this.steps[0]} ${exists ? 'exists' : 'does no exist'}`);
+            if (exists) {
+                logInfo(`skipping`);
+                return;
+            }
+            first = 1;
+        }
+        let adjustedSnippet = await this.parent.varDefs.applySubstitutions(this.steps.slice(first));
         if (adjustedSnippet.length === 1) {
             logInfo(`Inserting a 1 line snippet (${this.parent.name} action #${this.sequenceNumber}): "${adjustedSnippet[0]}"`);
         } else {

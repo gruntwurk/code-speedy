@@ -12,31 +12,46 @@ vars:
 javascript:
     let editor = window.activeTextEditor;
     let sigLine = editor.document.lineAt(window.activeTextEditor.selection.start.line).text;
-    let functionParts = speedy.parsePythonSignature(sigLine);
+    let sigParts = speedy.parsePythonSignature(sigLine);
     let codeFilename = path.parse(speedy.getFilePath()).base;
     let codeModuleName = path.parse(speedy.getFilePath()).name;
 	speedy.setLiteral('code_filename',codeFilename);
 	speedy.setLiteral('code_module_name',codeModuleName);
-	speedy.setLiteral('function_name',functionParts.functionName);
-	speedy.setLiteral('arg_name_list',functionParts.argumentNames.join(','));
-    let argTypes = functionParts.argumentTypes;
-    let argDefaults = functionParts.argumentDefaults;
-    for (let i = 0; i < argTypes.length; i++) {
-        if (argDefaults[i] == "") {
-            argDefaults[i] = (argTypes[i] == "int") ? "123" : '"abc"';
+    if (sigParts.isClass) {
+	    speedy.setLiteral('is_class',"true");
+	    speedy.setLiteral('class_name',sigParts.className);
+	    speedy.setLiteral('instance_name',sigParts.className.toLowerCase());
+    } else {
+	    speedy.unsetVariable('is_class');
+        speedy.setLiteral('function_name',sigParts.functionName);
+        speedy.setLiteral('arg_name_list',sigParts.argumentNames.join(','));
+        let argTypes = sigParts.argumentTypes;
+        let argDefaults = sigParts.argumentDefaults;
+        for (let i = 0; i < argTypes.length; i++) {
+            if (argDefaults[i] == "") {
+                argDefaults[i] = (argTypes[i] == "int") ? "123" : '"abc"';
+            }
         }
+        speedy.setLiteral('arg_val_list',argDefaults.join(','));
+        speedy.setLiteral('first_arg_val',argDefaults[0]);
     }
-	speedy.setLiteral('arg_val_list',argDefaults.join(','));
-	speedy.setLiteral('first_arg_val',argDefaults[0]);
     let fullUnitTestFilename = `${path.parse(speedy.getFilePath()).dir}/../tests/test_${codeFilename}`;
     speedy.editFileToAppend(fullUnitTestFilename);
 snip:
+IFDEF is_class
+from ..${code_module_name} import $class_name
 
+def setup():
+    ${instance_name} = ${class_name}()
+
+snip:
+IFNDEF is_class
 from ..${code_module_name} import $function_name
 
 def test_$function_name():
 	( ${arg_name_list} ) = ( $arg_val_list )
     assert $function_name($arg_name_list) == $first_arg_val
+
 speedy:
     // Sticking another speedy: here simply forces the snippet to end (without the following blank lines)
 
@@ -58,9 +73,9 @@ javascript:
     const editor = window.activeTextEditor;
     const doc = editor.document;
     let sigLine = doc.lineAt(editor.selection.start).text;
-    let functionParts = speedy.parsePythonSignature(sigLine);
-    speedy.setLiteral('function_name',(functionParts.isClassMember ? 'self.' : '') + functionParts.functionName);
-    speedy.setLiteral('arg_name_list',functionParts.argumentNames.join(','));
+    let sigParts = speedy.parsePythonSignature(sigLine);
+    speedy.setLiteral('function_name',(sigParts.isClassMember ? 'self.' : '') + sigParts.functionName);
+    speedy.setLiteral('arg_name_list',sigParts.argumentNames.join(','));
 snip:
     $function_name($arg_name_list)
 speedy:

@@ -144,26 +144,40 @@ javascript:
     const doc = editor.document;   // speedy, but then ignore by the JS interpreter)
     let sigLine = doc.lineAt(window.activeTextEditor.selection.start.line).text;
     // speedy is a special object that you can reference in your JS (along with vscode, window, and path)
-    let functionParts = speedy.parsePythonSignature(sigLine);
+    let sigParts = speedy.parsePythonSignature(sigLine);
     let codeFilename = path.parse(speedy.getFilePath()).base;
     let codeModuleName = path.parse(speedy.getFilePath()).name;
     speedy.setLiteral('code_filename',codeFilename);
     speedy.setLiteral('code_module_name',codeModuleName);
-    speedy.setLiteral('function_name',functionParts.functionName);
-    speedy.setLiteral('arg_name_list',functionParts.argumentNames.join(','));
-    let argTypes = functionParts.argumentTypes;
-    let argDefaults = functionParts.argumentDefaults;
-    for (let i = 0; i < argTypes.length; i++) {
-        if (argDefaults[i] == "") {
-            argDefaults[i] = (argTypes[i] == "int") ? "123" : '"abc"';
+    if (sigParts.isClass) {
+        speedy.setLiteral('is_class',"true");
+        speedy.setLiteral('class_name',sigParts.className);
+        speedy.setLiteral('instance_name',sigParts.className.toLowerCase());
+    } else {
+        speedy.unsetVariable('is_class');
+        speedy.setLiteral('function_name',sigParts.functionName);
+        speedy.setLiteral('arg_name_list',sigParts.argumentNames.join(','));
+        let argTypes = sigParts.argumentTypes;
+        let argDefaults = sigParts.argumentDefaults;
+        for (let i = 0; i < argTypes.length; i++) {
+            if (argDefaults[i] == "") {
+                argDefaults[i] = (argTypes[i] == "int") ? "123" : '"abc"';
+            }
         }
+        speedy.setLiteral('arg_val_list',argDefaults.join(','));
+        speedy.setLiteral('first_arg_val',argDefaults[0]);
     }
-    speedy.setLiteral('arg_val_list',argDefaults.join(','));
-    speedy.setLiteral('first_arg_val',argDefaults[0]);
     let fullUnitTestFilename = `${path.parse(speedy.getFilePath()).dir}/../tests/test_${codeFilename}`;
     speedy.editFileToAppend(fullUnitTestFilename);
 snip:
+IFDEF is_class
+from ..${code_module_name} import $class_name
 
+def setup():
+    ${instance_name} = ${class_name}()
+
+snip:
+IFNDEF is_class
 from ..${code_module_name} import $function_name
 
 def test_$function_name():
@@ -183,17 +197,19 @@ The following action type declarations are recognized:
 * *snippet:* (or "snip:")
 * *variables:* (or "vars:")
 
-For a command, the name of the command goes on the next line (the first "step").
+For a *command*, the name of the command goes on the next line (the first "step").
 Any arguments go on the following lines (steps 2, 3, ...).
 
-For JavaScript, a shell script, or a snippet, the code or template text begins with the next line (steps 1 thru N).
+For *JavaScript* or a *shell script*, the code begins with the next line (steps 1 thru N).
 
-For variables, either put the word "standard" on a line by itself, and/or list your own variable definition(s).
+For a *snippet*, the template text begins with the next line (steps 1 thru N).
+Optionally, the first line can begin with an IFDEF or IFNDEF directive followed by a variable name, which can cause the rest of the snippet to be ignored.
+
+For *variables*, either put the word "standard" on a line by itself, and/or list your own variable definition(s).
 A variable definition consists of a name, followed by an equal sign (=), followed by a JavaScript expression.
 Again, the name can only consist of letters, numbers, and underscores.
 Specifying ("standard") causes twenty+ predefined variables to be loaded.
 (See the complete list below.)
-
 
 Your JavaScript (in both the javascript action and the variable definitions) has access to the `speedy` object, the `vscode` object, the `window` object and the `path` object.
 
@@ -234,6 +250,10 @@ Equivalent of declaring `name = expression` in a `vars:` action, but programmati
 * *setLiteral(name, value)* --
 Sets a variable to an exact string value (not an expression).
 Equivalent of declaring `name = "string literal"` in a `vars:` action.
+
+* *unsetVariable(name)* -- 
+Ensures that the named variable does not exist. 
+(For use with the snippet action's IFDEF/IFNDEF directives.)
 
 * *expandAllSelectionsToWords()* --
 This tool will check each selection (if multi-select, or just the one if not).

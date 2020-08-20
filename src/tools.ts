@@ -66,6 +66,12 @@ export class MacroWriterTools {
         this.parent?.varDefs.setVariable(varName, expression);
     }
     /**
+     * Deletes a variable definition. (Okay if it doesn't exist already.)
+     */
+    unsetVariable(varName: string) {
+        this.parent?.varDefs.unsetVariable(varName);
+    }
+    /**
      * Sets a variable to an exact string value (not an expression).
      * Equivalent of declaring `name = "string literal"` in a `vars:` action.
      */
@@ -135,8 +141,10 @@ export class MacroWriterTools {
     }
 
     /**
-     * Parses the Python function signature that's under the cursor (anywhere on the line).
+     * Parses the Python class or function signature that's under the cursor (anywhere on the line).
      * Returns an object with the following attributes:
+     *     isClass: true if the line in question is a class signture
+     *     className: the class name (if a class signature, otherwise...)
      *     functionName: the function name,
      *     argumentCount: the number of argument definitions
      *     argumentNames: a list of the argument names, in order
@@ -147,11 +155,20 @@ export class MacroWriterTools {
      * Likewise, if no default value.
      */
     parsePythonSignature(pythonCodeLine: string): any {
-        const signaturePattern = /^\s*(def\s+)+(\w+)\(([^)]*)\)([^:]*):/g;
+        const classSignaturePattern    = /^\s*(class\s+)(\w+)(\(\w+\))?:/g;
+        const functionSignaturePattern = /^\s*(def\s+)(\w+)\(([^)]*)\)([^:]*):/g;
         const argumentPattern = /([^:=,]+)(:([^=,]+))?(=([^,]+))?(,|$)/g;
         logInfo(`Parsing: ${pythonCodeLine}`);
-        const fMatches = pythonCodeLine.matchAll(signaturePattern);
+        const cMatches = pythonCodeLine.matchAll(classSignaturePattern);
+        const fMatches = pythonCodeLine.matchAll(functionSignaturePattern);
         let result = {};
+        for (const cMatch of cMatches) {
+            let className = cMatch[2].trim();
+            result = {
+                className: className,
+                isClass: true
+            };
+        }
         for (const fMatch of fMatches) {
             let functionName = fMatch[2].trim();
             let argNames = [];
@@ -184,9 +201,9 @@ export class MacroWriterTools {
                 argumentNames: argNames,
                 argumentTypes: argTypes,
                 argumentDefaults: argDefaults,
-                isClassMember: isClassMember
+                isClassMember: isClassMember,
+                isClass: false
             };
-
         }
         logInfo(`${result}`);
         return result;
