@@ -58,10 +58,13 @@ export function cloneArray(originalArray: any[]): any[] {
 }
 
 export function enquote(value:string) {
-    value = value.replace("\\","\\\\");
-    if (value.includes('"')) {
-        value = value.replace("'","\\'");
-        return `'${value}'`;
+    let enquoted = value.replace(/\\/g,"\\\\");
+    if (enquoted.includes('"')) {
+        enquoted = enquoted.replace(/'/g,"\\'");
+        enquoted = `'${enquoted}'`;
+    } else {
+        enquoted = `"${enquoted}"`;
     }
-    return `"${value}"`;
+    // logInfo(`Enquoted ${value} => ${enquoted}`);
+    return enquoted;
 }

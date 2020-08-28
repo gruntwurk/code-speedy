@@ -3,7 +3,8 @@ import * as vscode from 'vscode';
 import { VariableDefs } from './variables';
 import { ActionType, MacroAction } from './actions';
 import { Mutex } from './mutex';
-import { logError, logInfo } from './utils';
+import { logError, logInfo, enquote } from './utils';
+import { MacroWriterTools } from './tools';
 
 const MACRO_PREFIX = "speedy.";
 const MACRO_NAME_PATTERN = /^\[(\w+)\]\s*/;
@@ -25,10 +26,18 @@ export class MacroDef {
     registered: boolean = false;
     options: OptionsDict = {"verbose": false};
     runnerMutex = new Mutex();
+    executionQueue: Promise<any>[] = [];
+    tools: MacroWriterTools;
+    paused: boolean = false;
 
     constructor(parent: SpeedyMacros, name: string) {
+        this.tools = new MacroWriterTools(this);
         this.parent = parent;
         this.name = name;
+    }
+    pauseMacro() {
+        this.paused = true;
+        console.log(`PAUSED here.`);
     }
     register() {
         if (!this.registered) {
@@ -47,11 +56,27 @@ export class MacroDef {
         }
         this.registered = false;
     }
-    async execute() {
+
+
+    execute() {
         for (let action of this.actions) {
-            await action.execute();
+            if (!this.paused) {
+                action.runner();
+            }
         }
     }
+
+    resume(nextAction: number) {
+        console.log(`RESUMING with action #${nextAction}`);
+        this.paused = false;
+        for (let i = nextAction-1; i < this.actions.length; i++) {
+         let action = this.actions[i];
+            if (!this.paused) {
+                action.runner();
+            }
+        }
+    }
+
     addAction(action: MacroAction){
         this.actions.push(action);
     }

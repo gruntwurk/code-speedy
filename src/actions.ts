@@ -16,7 +16,8 @@ export enum ActionType {
     javascript = "JS",
     shellscript = "SHELL",
     variables = "VARS",
-    snippet = "SNIP"
+    snippet = "SNIP",
+    waitfor = "WAITFOR"
 }
 
 export const actionTypeSynonymns = {
@@ -32,7 +33,8 @@ export const actionTypeSynonymns = {
     "vars": ActionType.variables,
     "variables": ActionType.variables,
     "snip": ActionType.snippet,
-    "snippet": ActionType.snippet
+    "snippet": ActionType.snippet,
+    "waitfor": ActionType.waitfor
 } as {
     [key: string]: ActionType
 };
@@ -53,47 +55,63 @@ export class MacroAction {
         this.actionType = actionTypeSynonymns[actionTypeString];
     }
 
-    async execute() {
+    async runner(): Promise<any> {
         if (this.actionType === undefined) {
             logError(`Action #${this.sequenceNumber} of the ${this.parent.name} macro does not specify a valid action type. Skipping.`);
-            return;
+        } else if (this.actionType === ActionType.description) {
+            return this.applyDescription();
+        } else if (this.actionType === ActionType.speedy) {
+            return this.applySpeedyOptions();
+        } else if (this.actionType === ActionType.variables) {
+            return this.runVarsAction();
+        } else if (this.actionType === ActionType.command) {
+            return this.runCommand();
+        } else if (this.actionType === ActionType.javascript) {
+            return this.runJS();
+        } else if (this.actionType === ActionType.shellscript) {
+            return this.runShellScript();
+        } else if (this.actionType === ActionType.snippet) {
+            return this.runSnippet();
+        } else if (this.actionType === ActionType.waitfor) {
+            return this.runWaitFor();
+        } else {
+            logError(`Unimplemented action type encountered: ${this.actionType}`);
         }
-        const unlock = await this.parent.runnerMutex.lock();
-        logInfo(`Action #${this.sequenceNumber} of the ${this.parent.name} macro has the lock.`);
-        try {
-            if (this.actionType === ActionType.description) {
-                this.applyDescription();
-            } else if (this.actionType === ActionType.speedy) {
-                this.applySpeedyOptions();
-            } else if (this.actionType === ActionType.variables) {
-                this.runVarsAction();
-            } else if (this.actionType === ActionType.command) {
-                this.runCommand();
-            } else if (this.actionType === ActionType.javascript) {
-                this.runJS();
-            } else if (this.actionType === ActionType.shellscript) {
-                this.runShellScript();
-            } else if (this.actionType === ActionType.snippet) {
-                this.runSnippet();
-            } else {
-                logError(`Unimplemented action type encountered: ${this.actionType}`);
+        return null;
+    }
+
+    runWaitFor() {
+        let cond = this.steps[0];
+        logInfo(`TRACE #${this.sequenceNumber}: runWaitFor condtion: ${cond}`);
+        this.parent.pauseMacro();
+        var id: NodeJS.Timeout;
+        var count = 0;
+        let speedy = this.parent.tools;
+        const upon = () => {
+            let result = eval(cond);
+            logInfo(`${cond} = ${result}`);
+            if (count++ > 50 || result) {
+                console.log(`WaitFor count = ${count}`);
+                clearInterval(id);
+                this.parent.resume(this.sequenceNumber+1);
             }
-        } finally {
-            unlock();
-            logInfo(`Action #${this.sequenceNumber} of the ${this.parent.name} macro has released the lock.`);
-        }
+        };
+        id = setInterval(upon, 50);
     }
 
 
     applyDescription() {
+        logInfo(`TRACE #${this.sequenceNumber}: applyDescription`);
         if (this.parent.options.verbose) {
             logInfo(`Macro description (${this.parent.name} action #${this.sequenceNumber}) ignored (for now).`);
         }
     }
     async runVarsAction() {
+        logInfo(`TRACE #${this.sequenceNumber}: runVarsAction`);
         this.parent.varDefs.addVariables(this.steps);
     }
     async applySpeedyOptions() {
+        logInfo(`TRACE #${this.sequenceNumber}: applySpeedyOptions`);
         for (let step of this.steps) {
             let stepParts = step.split("=", 2);
             this.parent.options[stepParts[0].trim()] = stepParts[1].trim();
@@ -102,6 +120,7 @@ export class MacroAction {
         }
     }
     async runCommand() {
+        logInfo(`TRACE #${this.sequenceNumber}: runCommand`);
         let commandName = this.steps[0];
         let commandArgs: string[] = [];
         if (this.steps.length > 1) {
@@ -122,6 +141,7 @@ export class MacroAction {
     }
 
     async runSnippet() {
+        logInfo(`TRACE #${this.sequenceNumber}: runSnippet`);
         let first = 0;
         if (this.steps[0].startsWith("IFDEF ")) {
             let varname = this.steps[0].slice(6).trim();
@@ -154,7 +174,7 @@ export class MacroAction {
 
     runJsCodeInMacroEnvironment(code: string[]) {
         // logInfo(code.join("\n"));
-        let speedy = new MacroWriterTools(this.parent);
+        let speedy = this.parent.tools;
         try {
             eval(code.join("\n"));
             // return Function('return (' + code.join("\n") + ')')(); // ( vscode );
@@ -165,6 +185,7 @@ export class MacroAction {
     }
 
     async runJS() {
+        logInfo(`TRACE #${this.sequenceNumber}: runJS`);
         // NOTE: We cann do applySubstitutions(this.steps) here, because the ${} placeholders conflict with code that uses `` format strings
         let adjustedJsCode = this.steps;
         if (this.parent.options.verbose) {
@@ -177,6 +198,7 @@ export class MacroAction {
         this.runJsCodeInMacroEnvironment(adjustedJsCode);
     }
     async runShellScript() {
+        logInfo(`TRACE #${this.sequenceNumber}: runShellScrip`);
         let adjustedScript = await this.parent.varDefs.applySubstitutions(this.steps);
         if (this.parent.options.verbose) {
             if (adjustedScript.length === 1) {

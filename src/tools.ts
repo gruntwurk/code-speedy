@@ -6,39 +6,68 @@ import path = require("path");
 import { MacroDef } from './macros';
 import { enquote, logError, logInfo } from './utils';
 import { Mutex } from './mutex';
+import { DH_NOT_SUITABLE_GENERATOR } from 'constants';
 
 export class MacroWriterTools {
     parent: MacroDef | undefined;
-    mutexUnlock: (() => void) | undefined = undefined;
+    runnerMutex: Mutex;
+    className: string = "";
 
     constructor(parent: MacroDef | undefined) {
         this.parent = parent;
-    }
-
-    /**
-     * Obtain a mutex lock.
-     * (There is probably no need to call this directly from your macro.
-     * This is here for the other tools to use.)
-     */
-    async lock() {
-        if (this.parent) {
-            logInfo("speedy.lock() called.");
-            this.mutexUnlock = await this.parent.runnerMutex.lock();
-            logInfo("speedy.lock() has the lock.");
+        if (parent) {
+            this.runnerMutex = parent.runnerMutex;
+        } else {
+            this.runnerMutex = new Mutex();
         }
     }
 
-    /**
-     * Release the mutex lock
-     */
-    unlock() {
-        logInfo("speedy.unlock() called.");
-        if (this.mutexUnlock) {
-            this.mutexUnlock();
-            logInfo("speedy.unlock() released the lock.");
-            this.mutexUnlock = undefined;
+ 
+
+    matchAll(haystack: string, pattern: string): string[] {
+        const regexp = RegExp(pattern, 'g');
+        let matches = [];
+        let match;
+        while ((match = regexp.exec(haystack)) !== null) {
+            matches.push(match[0]);
         }
+        return matches;
     }
+
+    /**
+     * Converts CamelCase or javaCase to snake_case (all lower with underscores).
+     */
+    snakeCase(identifier: string) {
+        let wordMatches = this.matchAll(identifier, "([a-z]+|[A-Z][a-z]*|[^A-Za-z]+)");
+        let words = [];
+        for (const match of wordMatches) {
+            words.push(match[0].toLowerCase());
+        };
+        return words.join("_");
+    };
+
+    /**
+     * Converts snake_case to CamelCase.
+     */
+    camelCase(identifier: string) {
+        let words = identifier.split('_');
+        let camelWords = words.map(function (w) {
+            return w[0].toUpperCase() + w.slice(1,).toLowerCase();
+        });
+        return camelWords.join('');
+    };
+
+    /**
+     * Converts snake_case to javaCase (same as CamelCase but with a leading lowercase).
+     */
+    javaCase(identifier: string) {
+        let words = identifier.split('_');
+        let camelWords = words.map(function (w) {
+            return w[0].toUpperCase() + w.slice(1,).toLowerCase();
+        });
+        camelWords[0] = camelWords[0].toLowerCase();
+        return camelWords.join('');
+    };
 
 
     /**
@@ -78,6 +107,50 @@ export class MacroWriterTools {
     setLiteral(varName: string, value: string) {
         this.parent?.varDefs.setVariable(varName, enquote(value));
     }
+    getVariableValue(varName: string): any {
+        if (this.parent) {
+            return this.parent.varDefs.evaluateVariable(varName);
+        }
+        return null;
+    }
+    findVars(symbols: vscode.DocumentSymbol[], symbolKind = vscode.SymbolKind.Variable): vscode.DocumentSymbol[] {
+        var vars = symbols.filter(symbol => symbol.kind === symbolKind);
+        return vars.concat(symbols.map(symbol => this.findVars(symbol.children, symbolKind))
+            .reduce((a, b) => a.concat(b), []));
+    }
+
+    /**
+     * Returns the name of the first class symbol found in the document.
+     * TODO get it to check the range for the current position, and not settle on the first one.
+     */
+    getClassName(): string {
+        // console.log(`getClassName called. Returning ${this.className}`);
+        return this.className;
+    }
+
+    async loadClassName() {
+        console.log(`loadClassName called.`);
+        var editor = vscode.window.activeTextEditor;
+        if (editor !== undefined) {
+            let filepath = editor.document.uri;
+            await vscode.commands.executeCommand<vscode.DocumentSymbol[]>(
+                'vscode.executeDocumentSymbolProvider', filepath)
+                .then(symbols => {
+                    if (symbols !== undefined) {
+                        console.log(`symbols.length = ${symbols.length}.`);
+                        let classes = this.findVars(symbols, vscode.SymbolKind.Class);
+                        console.log(`classes.length = ${classes.length}.`);
+                        for (const variable of classes) {
+                            console.log(`loadClassName inner found: ${variable.name}`);
+                            this.className = variable.name;
+                            break;
+                        }
+                    }
+                    console.log(`loadClassName reports: ${this.className}`);
+                });
+            }
+    }
+
 
     /**
      * Just a shortcut for: window.activeTextEditor.document.uri.fsPath
@@ -93,6 +166,25 @@ export class MacroWriterTools {
      */
     getFilePath(): string {
         return window.activeTextEditor.document.uri.fsPath;
+    }
+
+    pathExists(filepath: string): boolean {
+        return fs.existsSync(filepath);
+    }
+
+    findSisterPath(subFolder: string) {
+        let fp = this.getFilePath();
+        while (true) {
+            let testPath = path.join(fp, subFolder);
+            if (this.pathExists(testPath)) {
+                return testPath;
+            }
+            fp = path.parse(fp).dir;
+            if (path.parse(fp).root >= fp) {
+                break;
+            }
+        }
+        return "";
     }
 
     // /**
@@ -111,12 +203,13 @@ export class MacroWriterTools {
      */
     async executeCommand(command: string) {
         logInfo(`speedy.executeCommand: ${command}`);
-        this.lock();
+        const unlock = await this.runnerMutex.lock("executeCommand");
         try {
             await vscode.commands.executeCommand(command);
         }
         finally {
-            this.unlock();
+            unlock();
+            logInfo("executeCommand unlocked.");
         }
     }
 
@@ -128,16 +221,10 @@ export class MacroWriterTools {
     async editFileToAppend(filepath: string) {
         logInfo(`Opening editor for: ${filepath}`);
         let uri = vscode.Uri.file(filepath);
-        this.lock();
-        try {
-            await vscode.workspace.openTextDocument(uri)
-                .then(doc => vscode.window.showTextDocument(doc))
-                .then(ed => ed.revealRange(ed.visibleRanges[0]))
-                .then(x => vscode.commands.executeCommand("cursorBottom"));
-        }
-        finally {
-            this.unlock();
-        }
+        await vscode.workspace.openTextDocument(uri)
+            .then(doc => vscode.window.showTextDocument(doc))
+            .then(ed => ed.revealRange(ed.visibleRanges[0]))
+            .then(x => vscode.commands.executeCommand("cursorBottom"));
     }
 
     /**
@@ -155,7 +242,7 @@ export class MacroWriterTools {
      * Likewise, if no default value.
      */
     parsePythonSignature(pythonCodeLine: string): any {
-        const classSignaturePattern    = /^\s*(class\s+)(\w+)(\(\w+\))?:/g;
+        const classSignaturePattern = /^\s*(class\s+)(\w+)(\(\w+\))?:/g;
         const functionSignaturePattern = /^\s*(def\s+)(\w+)\(([^)]*)\)([^:]*):/g;
         const argumentPattern = /([^:=,]+)(:([^=,]+))?(=([^,]+))?(,|$)/g;
         logInfo(`Parsing: ${pythonCodeLine}`);
