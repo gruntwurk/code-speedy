@@ -45,10 +45,8 @@ javascript:
 	  let sels = editor.selections;
 	  if (i < 0 || i >= sels.length) { return; }
 	  let sel = sels[i];
-	  let word_matches = editor.document.getText(sel).matchAll(/([a-z]+|[A-Z][a-z]*|[^A-Za-z]+)/g);
-	  let words = [];
-	  for (const match of word_matches) {words.push(match[0].toLowerCase())};
-	  editor.edit(eb => {eb.replace(sel, words.join('_'))}).then(x => {
+	  let snake = speedy.snakeCase(editor.document.getText(sel));
+	  editor.edit(eb => {eb.replace(sel, snake)}).then(x => {
 	    doTransform(i+1);
 	  });
 	}
@@ -66,9 +64,8 @@ javascript:
 	  let sels = editor.selections;
 	  if (i < 0 || i >= sels.length) { return; }
 	  let sel = sels[i];
-	  let words = editor.document.getText(sel).split('_')
-	  let camel_words = words.map(function(w) {return w[0].toUpperCase() + w.slice(1,).toLowerCase()});
-	  editor.edit(eb => {eb.replace(sel, camel_words.join(''))}).then(x => {
+	  let camel = speedy.camelCase(editor.document.getText(sel));
+	  editor.edit(eb => {eb.replace(sel, camel)}).then(x => {
 	    doTransform(i+1);
 	  });
 	}
