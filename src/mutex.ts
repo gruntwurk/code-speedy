@@ -26,25 +26,23 @@ export class Mutex {
      * Once the promise resolves, you gain the lock.
      * When you are done with the protected resource, call the unlock() function to release it.
      */
-    lock(caller: string = "unknown"): PromiseLike<() => void> {
-        console.log(`Mutex locked by ${caller}`);
+    lock(): PromiseLike<() => void> {
         // The `begin` function creates an `unlock` function for the client code to call when it no longer needs the resource.
         // `begin` is just a proxy to start, but, by the time it is actually invoked it will be a different function.
         let begin: (unlock: () => void) => void = unlock => { };
 
         // Hang (another) lock-request on the mutex -- in the form of a then() clause that calls `begin`.
         this.mutex = this.mutex.then(() => {
-            // console.log(`Mutex for ${caller} unlocked.`);
             return new Promise(begin);
         });
 
         return new Promise(res => { begin = res; });
     }
 
-    async dispatch(fn: (() => any) | (() => PromiseLike<any>)): Promise<any> {
+    async dispatch(fn: ((arg0: any) => any) | ((arg0: any) => PromiseLike<any>), args: any = null): Promise<any> {
         const unlock = await this.lock();
         try {
-            return await Promise.resolve(fn());
+            return await Promise.resolve(fn(args));
         } finally {
             unlock();
         }

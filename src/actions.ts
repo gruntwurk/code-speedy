@@ -90,8 +90,8 @@ export class MacroAction {
         const upon = () => {
             let result = eval(cond);
             logInfo(`${cond} = ${result}`);
-            if (count++ > 50 || result) {
-                console.log(`WaitFor count = ${count}`);
+            if (count++ > 10 || result) {
+                logInfo(`WaitFor count = ${count}`);
                 clearInterval(id);
                 this.parent.resume(this.sequenceNumber+1);
             }

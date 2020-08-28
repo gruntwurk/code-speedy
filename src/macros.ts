@@ -37,7 +37,7 @@ export class MacroDef {
     }
     pauseMacro() {
         this.paused = true;
-        console.log(`PAUSED here.`);
+        logInfo(`PAUSED here.`);
     }
     register() {
         if (!this.registered) {
@@ -67,7 +67,7 @@ export class MacroDef {
     }
 
     resume(nextAction: number) {
-        console.log(`RESUMING with action #${nextAction}`);
+        logInfo(`RESUMING with action #${nextAction}`);
         this.paused = false;
         for (let i = nextAction-1; i < this.actions.length; i++) {
          let action = this.actions[i];

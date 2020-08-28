@@ -6,7 +6,6 @@ import path = require("path");
 import { MacroDef } from './macros';
 import { enquote, logError, logInfo } from './utils';
 import { Mutex } from './mutex';
-import { DH_NOT_SUITABLE_GENERATOR } from 'constants';
 
 export class MacroWriterTools {
     parent: MacroDef | undefined;
@@ -22,7 +21,7 @@ export class MacroWriterTools {
         }
     }
 
- 
+
 
     matchAll(haystack: string, pattern: string): string[] {
         const regexp = RegExp(pattern, 'g');
@@ -38,12 +37,12 @@ export class MacroWriterTools {
      * Converts CamelCase or javaCase to snake_case (all lower with underscores).
      */
     snakeCase(identifier: string) {
-        let wordMatches = this.matchAll(identifier, "([a-z]+|[A-Z][a-z]*|[^A-Za-z]+)");
-        let words = [];
-        for (const match of wordMatches) {
-            words.push(match[0].toLowerCase());
+        let words = this.matchAll(identifier, "([a-z]+|[A-Z][a-z]*|[^A-Za-z]+)");
+        let lowerWords = [];
+        for (const word of words) {
+            lowerWords.push(word.toLowerCase());
         };
-        return words.join("_");
+        return lowerWords.join("_");
     };
 
     /**
@@ -121,15 +120,15 @@ export class MacroWriterTools {
 
     /**
      * Returns the name of the first class symbol found in the document.
+     * IMPORTANT: loadClassName() must have been called first with sufficient time to act.
      * TODO get it to check the range for the current position, and not settle on the first one.
      */
     getClassName(): string {
-        // console.log(`getClassName called. Returning ${this.className}`);
         return this.className;
     }
 
     async loadClassName() {
-        console.log(`loadClassName called.`);
+        logInfo(`loadClassName called.`);
         var editor = vscode.window.activeTextEditor;
         if (editor !== undefined) {
             let filepath = editor.document.uri;
@@ -137,16 +136,16 @@ export class MacroWriterTools {
                 'vscode.executeDocumentSymbolProvider', filepath)
                 .then(symbols => {
                     if (symbols !== undefined) {
-                        console.log(`symbols.length = ${symbols.length}.`);
+                        logInfo(`symbols.length = ${symbols.length}.`);
                         let classes = this.findVars(symbols, vscode.SymbolKind.Class);
-                        console.log(`classes.length = ${classes.length}.`);
+                        logInfo(`classes.length = ${classes.length}.`);
                         for (const variable of classes) {
-                            console.log(`loadClassName inner found: ${variable.name}`);
+                            logInfo(`loadClassName inner found: ${variable.name}`);
                             this.className = variable.name;
                             break;
                         }
                     }
-                    console.log(`loadClassName reports: ${this.className}`);
+                    logInfo(`loadClassName reports: ${this.className}`);
                 });
             }
     }
@@ -202,15 +201,7 @@ export class MacroWriterTools {
      * your javascript resumes.
      */
     async executeCommand(command: string) {
-        logInfo(`speedy.executeCommand: ${command}`);
-        const unlock = await this.runnerMutex.lock("executeCommand");
-        try {
-            await vscode.commands.executeCommand(command);
-        }
-        finally {
-            unlock();
-            logInfo("executeCommand unlocked.");
-        }
+        this.runnerMutex.dispatch(vscode.commands.executeCommand, command);
     }
 
     /**

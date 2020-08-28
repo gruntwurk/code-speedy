@@ -15,7 +15,9 @@ waitfor:
     speedy.getClassName()
 javascript:
     var className = speedy.getClassName();
-    // console.log(`>>>>>>>>>>>>>>>>>>>>>>>>>>>>        got here -- className = ${className}`)
+    if (!className) {
+        className = "UnknownClassName"
+    }
     let editor = window.activeTextEditor;
     let sigLine = editor.document.lineAt(window.activeTextEditor.selection.start.line).text;
     let sigParts = speedy.parsePythonSignature(sigLine);
